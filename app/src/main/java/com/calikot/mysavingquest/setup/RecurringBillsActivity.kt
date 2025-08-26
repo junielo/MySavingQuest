@@ -13,10 +13,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,6 +30,9 @@ import com.calikot.mysavingquest.R
 import com.calikot.mysavingquest.models.BillItem
 import com.calikot.mysavingquest.ui.theme.AppBackground
 import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.calikot.mysavingquest.setup.dialog.AddBillDialog
 
 class RecurringBillsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,6 +64,19 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
     )
     val bills = remember { mutableStateListOf<BillItem>().apply { addAll(defaultBills) } }
 
+    val listState = rememberLazyListState()
+    val fabOffsetX = remember { Animatable(0f) }
+    val fabHiddenOffset = 300f // px to move FAB out of screen
+    val fabVisibleOffset = 0f
+    val isScrolling by remember { derivedStateOf<Boolean> { listState.isScrollInProgress } }
+
+    LaunchedEffect(isScrolling) {
+        fabOffsetX.animateTo(
+            if (isScrolling) fabHiddenOffset else fabVisibleOffset,
+            animationSpec = tween(durationMillis = 300)
+        )
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -71,7 +84,7 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             RecurringBillsTopBar()
-            RecurringBillsList(bills = bills)
+            RecurringBillsList(bills = bills, listState = listState)
         }
         FloatingActionButton(
             onClick = { showAddDialog = true },
@@ -82,6 +95,7 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(32.dp)
+                .offset { IntOffset(fabOffsetX.value.toInt(), 0) }
         ) {
             Text("+", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
         }
@@ -137,11 +151,11 @@ fun RecurringBillsTopBar() {
 }
 
 @Composable
-fun RecurringBillsList(bills: MutableList<BillItem>) {
+fun RecurringBillsList(bills: MutableList<BillItem>, listState: LazyListState) {
     var showDialog by remember { mutableStateOf(false) }
     var billToDelete by remember { mutableStateOf<BillItem?>(null) }
 
-    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+    LazyColumn(state = listState, modifier = Modifier.fillMaxWidth()) {
         itemsIndexed(bills, key = { _, bill -> bill.hashCode() }) { i, bill ->
             var offsetX by remember { mutableStateOf(0f) }
             val animatedOffsetX = remember { Animatable(0f) }

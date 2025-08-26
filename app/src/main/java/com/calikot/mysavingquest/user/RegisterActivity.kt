@@ -52,7 +52,7 @@ fun RegisterScreen(modifier: Modifier = Modifier) {
         Button(
             onClick = {
                 context.startActivity(
-                    android.content.Intent(context, com.calikot.mysavingquest.user.LoginActivity::class.java)
+                    android.content.Intent(context, LoginActivity::class.java)
                         .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                 )
                 if (context is android.app.Activity) {

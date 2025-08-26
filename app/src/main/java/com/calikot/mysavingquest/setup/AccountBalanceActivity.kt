@@ -1,6 +1,5 @@
 package com.calikot.mysavingquest.setup
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,9 +10,13 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -28,21 +32,17 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.calikot.mysavingquest.R
-import com.calikot.mysavingquest.models.BillItem
+import com.calikot.mysavingquest.models.AccountItem
 import com.calikot.mysavingquest.ui.theme.AppBackground
 import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.ui.platform.LocalContext
-import com.calikot.mysavingquest.setup.dialog.AddBillDialog
 
-class RecurringBillsActivity : ComponentActivity() {
+class AccountBalanceActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MySavingQuestTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    RecurringBillsScreen(modifier = Modifier.padding(innerPadding))
+                    AccountBalanceScreen(modifier = Modifier.padding(innerPadding))
                 }
             }
         }
@@ -50,31 +50,30 @@ class RecurringBillsActivity : ComponentActivity() {
 }
 
 @Composable
-fun RecurringBillsScreen(modifier: Modifier = Modifier) {
+fun AccountBalanceScreen(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
     var showAddDialog by remember { mutableStateOf(false) }
-    val defaultBills = listOf(
-        BillItem("House Rent", "Every 5th day of the month", 10000, false),
-        BillItem("Loklok", "Every 21st day of the month", 209, true),
-        BillItem("Youtube Premium", "Every 1st day of the month", 589, true),
-        BillItem("Github Copilot", "Every 28th day of the month", 580, true),
-        BillItem("Netflix", "Every 10th day of the month", 150, true),
-        BillItem("Spotify", "Every 15th day of the month", 99, true),
-        BillItem("Apple Music", "Every 12th day of the month", 129, true),
-        BillItem("Internet", "Every 2nd day of the month", 499, false),
-        BillItem("Electricity", "Every 7th day of the month", 1200, false),
-        BillItem("Water", "Every 8th day of the month", 300, false)
+    val defaultAccounts = listOf(
+        AccountItem("BDO Debit", "Debit"),
+        AccountItem("BDO Credit", "Credit"),
+        AccountItem("GCash Credit", "Credit")
     )
-    val bills = remember { mutableStateListOf<BillItem>().apply { addAll(defaultBills) } }
+    val accounts = remember { mutableStateListOf<AccountItem>().apply { addAll(defaultAccounts) } }
 
     val listState = rememberLazyListState()
-    val fabOffsetX = remember { Animatable(0f) }
-    val fabHiddenOffset = 300f // px to move FAB out of screen
+    val fabRightOffset = remember { Animatable(0f) }
+    val fabLeftOffset = remember { Animatable(0f) }
+    val fabHiddenOffset = 300f
     val fabVisibleOffset = 0f
     val isScrolling by remember { derivedStateOf<Boolean> { listState.isScrollInProgress } }
 
     LaunchedEffect(isScrolling) {
-        fabOffsetX.animateTo(
+        fabRightOffset.animateTo(
             if (isScrolling) fabHiddenOffset else fabVisibleOffset,
+            animationSpec = tween(durationMillis = 300)
+        )
+        fabLeftOffset.animateTo(
+            if (isScrolling) -fabHiddenOffset else fabVisibleOffset,
             animationSpec = tween(durationMillis = 300)
         )
     }
@@ -85,8 +84,8 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
             .background(AppBackground)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            RecurringBillsTopBar()
-            RecurringBillsList(bills = bills, listState = listState)
+            AccountBalanceTopBar()
+            AccountBalanceList(accounts = accounts, listState = listState)
         }
         FloatingActionButton(
             onClick = { showAddDialog = true },
@@ -97,16 +96,39 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(32.dp)
-                .offset { IntOffset(fabOffsetX.value.toInt(), 0) }
+                .offset { IntOffset(fabRightOffset.value.toInt(), 0) }
         ) {
-            Text("+", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+            Icon(Icons.Filled.Add, contentDescription = "Add", modifier = Modifier.size(32.dp))
+        }
+        FloatingActionButton(
+            onClick = {
+                context.startActivity(
+                android.content.Intent(context, RecurringBillsActivity::class.java)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+                if (context is android.app.Activity) {
+                    context.finish()
+                }
+            },
+            shape = CircleShape,
+            containerColor = Color(0xFF2C2C2C),
+            contentColor = Color.White,
+            elevation = FloatingActionButtonDefaults.elevation(6.dp),
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(32.dp)
+                .offset { IntOffset(fabLeftOffset.value.toInt(), 0) }
+        ) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(32.dp))
         }
         if (showAddDialog) {
-            AddBillDialog(
+            com.calikot.mysavingquest.setup.dialog.AddAccountBalanceDialog(
                 onDismiss = { showAddDialog = false },
-                onCreate = { bill ->
-                    bills.add(bill)
-                    showAddDialog = false
+                onCreate = { type, name ->
+                    if (name.isNotBlank()) {
+                        accounts.add(AccountItem(name, type))
+                        showAddDialog = false
+                    }
                 }
             )
         }
@@ -114,8 +136,7 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun RecurringBillsTopBar() {
-    val context = LocalContext.current
+fun AccountBalanceTopBar() {
     Surface(shadowElevation = 4.dp) {
         Row(
             modifier = Modifier
@@ -125,26 +146,22 @@ fun RecurringBillsTopBar() {
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Replace with your own icon resource if available
             Icon(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                contentDescription = "Bills Icon",
+                contentDescription = "Account Icon",
                 tint = Color.Black,
                 modifier = Modifier.size(32.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Recurring Bills",
+                text = "Account Balance",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black,
                 modifier = Modifier.weight(1f)
             )
             Button(
-                onClick = {
-                    val intent = Intent(context, AccountBalanceActivity::class.java)
-                    context.startActivity(intent)
-                },
+                onClick = { /* TODO: Next */ },
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2C)),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
@@ -157,12 +174,12 @@ fun RecurringBillsTopBar() {
 }
 
 @Composable
-fun RecurringBillsList(bills: MutableList<BillItem>, listState: LazyListState) {
+fun AccountBalanceList(accounts: MutableList<AccountItem>, listState: LazyListState) {
     var showDialog by remember { mutableStateOf(false) }
-    var billToDelete by remember { mutableStateOf<BillItem?>(null) }
+    var accountToDelete by remember { mutableStateOf<AccountItem?>(null) }
 
     LazyColumn(state = listState, modifier = Modifier.fillMaxWidth()) {
-        itemsIndexed(bills, key = { _, bill -> bill.hashCode() }) { i, bill ->
+        itemsIndexed(accounts, key = { _, account -> account.hashCode() }) { i, account ->
             var offsetX by remember { mutableStateOf(0f) }
             val animatedOffsetX = remember { Animatable(0f) }
             val threshold = 200f
@@ -173,7 +190,7 @@ fun RecurringBillsList(bills: MutableList<BillItem>, listState: LazyListState) {
                 if (showDialogForItem && !showDialog) {
                     animatedOffsetX.animateTo(-threshold, animationSpec = tween(200))
                     showDialog = true
-                    billToDelete = bill
+                    accountToDelete = account
                 } else if (!showDialogForItem && offsetX == 0f) {
                     animatedOffsetX.animateTo(0f, animationSpec = tween(200))
                 } else {
@@ -186,7 +203,6 @@ fun RecurringBillsList(bills: MutableList<BillItem>, listState: LazyListState) {
                     .fillMaxWidth()
                     .background(Color.Transparent)
             ) {
-                // Delete icon background
                 if (showDeleteIcon) {
                     Box(
                         modifier = Modifier
@@ -218,25 +234,25 @@ fun RecurringBillsList(bills: MutableList<BillItem>, listState: LazyListState) {
                             )
                         }
                 ) {
-                    RecurringBillRow(bill)
+                    AccountBalanceRow(account)
                 }
             }
-            if (i < bills.lastIndex) HorizontalDivider(color = Color(0xFFE0E0E0), thickness = 1.dp)
+            if (i < accounts.lastIndex) HorizontalDivider(color = Color(0xFFE0E0E0), thickness = 1.dp)
         }
     }
-    if (showDialog && billToDelete != null) {
+    if (showDialog && accountToDelete != null) {
         AlertDialog(
             onDismissRequest = {
                 showDialog = false
-                billToDelete = null
+                accountToDelete = null
             },
-            title = { Text("Delete Bill") },
-            text = { Text("Are you sure you want to delete this bill?") },
+            title = { Text("Delete Account") },
+            text = { Text("Are you sure you want to delete this account?") },
             confirmButton = {
                 TextButton(onClick = {
-                    bills.remove(billToDelete)
+                    accounts.remove(accountToDelete)
                     showDialog = false
-                    billToDelete = null
+                    accountToDelete = null
                 }) {
                     Text("Yes")
                 }
@@ -244,7 +260,7 @@ fun RecurringBillsList(bills: MutableList<BillItem>, listState: LazyListState) {
             dismissButton = {
                 TextButton(onClick = {
                     showDialog = false
-                    billToDelete = null
+                    accountToDelete = null
                 }) {
                     Text("No")
                 }
@@ -254,46 +270,23 @@ fun RecurringBillsList(bills: MutableList<BillItem>, listState: LazyListState) {
 }
 
 @Composable
-fun RecurringBillRow(bill: BillItem) {
+fun AccountBalanceRow(account: AccountItem) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = bill.name,
-                fontSize = 18.sp, // smaller than before
-                fontWeight = FontWeight.Medium,
-                color = Color.Black
-            )
-            Text(
-                text = bill.date,
-                fontSize = 13.sp, // smaller than before
-                color = Color(0xFF757575)
-            )
-        }
-        if (bill.isAuto) {
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = Color(0xFF2C2C2C),
-                shadowElevation = 0.dp
-            ) {
-                Text(
-                    text = "Auto",
-                    color = Color.White,
-                    fontSize = 13.sp,
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                        .align(Alignment.CenterVertically)
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-        }
         Text(
-            text = bill.amount.toString(),
-            fontSize = 20.sp,
+            text = account.name,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color.Black,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = account.type,
+            fontSize = 18.sp,
             fontWeight = FontWeight.Medium,
             color = Color.Black,
             textAlign = TextAlign.End

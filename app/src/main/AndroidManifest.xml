@@ -32,6 +32,10 @@
             android:name=".setup.AccountBalanceActivity"
             android:exported="false"
             android:label="Recurring Bills" />
+        <activity
+            android:name=".setup.NotificationSettingsActivity"
+            android:exported="false"
+            android:label="Notification Settings" />
     </application>
 
 </manifest>

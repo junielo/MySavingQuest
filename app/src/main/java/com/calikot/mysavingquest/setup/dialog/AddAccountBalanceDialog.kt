@@ -62,7 +62,7 @@ fun AddAccountBalanceDialog(
                         value = selectedType,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Credit/Debit Balance") },
+                        label = { Text("Select balance type") },
                         modifier = Modifier.fillMaxWidth(),
                         trailingIcon = {
                             IconButton(onClick = { expanded = true }) {

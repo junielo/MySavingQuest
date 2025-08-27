@@ -1,5 +1,6 @@
 package com.calikot.mysavingquest.setup
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -101,15 +102,7 @@ fun AccountBalanceScreen(modifier: Modifier = Modifier) {
             Icon(Icons.Filled.Add, contentDescription = "Add", modifier = Modifier.size(32.dp))
         }
         FloatingActionButton(
-            onClick = {
-                context.startActivity(
-                android.content.Intent(context, RecurringBillsActivity::class.java)
-                    .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
-                if (context is android.app.Activity) {
-                    context.finish()
-                }
-            },
+            onClick = { (context as? ComponentActivity)?.finish() },
             shape = CircleShape,
             containerColor = Color(0xFF2C2C2C),
             contentColor = Color.White,
@@ -137,6 +130,7 @@ fun AccountBalanceScreen(modifier: Modifier = Modifier) {
 
 @Composable
 fun AccountBalanceTopBar() {
+    val context = LocalContext.current
     Surface(shadowElevation = 4.dp) {
         Row(
             modifier = Modifier
@@ -161,7 +155,10 @@ fun AccountBalanceTopBar() {
                 modifier = Modifier.weight(1f)
             )
             Button(
-                onClick = { /* TODO: Next */ },
+                onClick = {
+                    val intent = Intent(context, NotificationSettingsActivity::class.java)
+                    context.startActivity(intent)
+                },
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2C)),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),

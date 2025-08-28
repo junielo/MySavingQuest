@@ -1,5 +1,6 @@
 package com.calikot.mysavingquest.setup
 
+import android.app.TimePickerDialog
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,6 +27,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.calikot.mysavingquest.ui.theme.AppBackground
+import java.util.*
 
 class NotificationSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,36 +121,35 @@ fun NotificationSettingsBody(
         Spacer(modifier = Modifier.height(32.dp))
         // Interval
         Text("Interval", fontWeight = FontWeight.Medium, fontSize = 18.sp, color = Color.Black, modifier = Modifier.padding(start = 24.dp, bottom = 8.dp))
-        Box(modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp)
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
         ) {
-            ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-                OutlinedTextField(
-                    value = interval,
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = {
-                        IconButton(onClick = { expanded = true }) {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            OutlinedTextField(
+                value = interval,
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable, true).fillMaxWidth()
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.exposedDropdownSize()
+            ) {
+                intervalOptions.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            interval = option
+                            expanded = false
                         }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    intervalOptions.forEach { option ->
-                        DropdownMenuItem(
-                            text = { Text(option) },
-                            onClick = {
-                                interval = option
-                                expanded = false
-                            }
-                        )
-                    }
+                    )
                 }
             }
         }
@@ -172,27 +173,25 @@ fun NotificationSettingsBody(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
                     .clickable { showTimePicker = true },
-                placeholder = { Text("Select time", color = Color(0xFFBDBDBD)) }
             )
         }
-        // Time picker dialog (simple placeholder)
         if (showTimePicker) {
-            AlertDialog(
-                onDismissRequest = { showTimePicker = false },
-                title = { Text("Pick Time") },
-                text = { Text("Time picker not implemented.") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        time = "08:00 AM"
+            val context = LocalContext.current
+            val cal = Calendar.getInstance()
+            val initialHour = try { time.split(":")[0].toInt() } catch (_: Exception) { cal.get(Calendar.HOUR_OF_DAY) }
+            val initialMinute = try { time.split(":")[1].toInt() } catch (_: Exception) { cal.get(Calendar.MINUTE) }
+            DisposableEffect(showTimePicker) {
+                if (showTimePicker) {
+                    val dialog = TimePickerDialog(context, { _, hour: Int, minute: Int ->
+                        time = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
                         showTimePicker = false
-                    }) { Text("OK") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
+                    }, initialHour, initialMinute, true)
+                    dialog.setOnDismissListener { showTimePicker = false }
+                    dialog.show()
                 }
-            )
+                onDispose { }
+            }
         }
     }
 }

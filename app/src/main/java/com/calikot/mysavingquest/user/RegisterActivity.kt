@@ -51,13 +51,7 @@ fun RegisterScreen(modifier: Modifier = Modifier) {
         // Top-right Sign up button
         Button(
             onClick = {
-                context.startActivity(
-                    android.content.Intent(context, LoginActivity::class.java)
-                        .addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                )
-                if (context is android.app.Activity) {
-                    context.finish()
-                }
+                (context as? ComponentActivity)?.finish()
             },
             modifier = modifier
                 .align(Alignment.TopEnd),

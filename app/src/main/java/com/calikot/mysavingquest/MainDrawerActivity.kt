@@ -101,7 +101,6 @@ fun MainDrawerScreen(modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(WindowInsets.safeDrawing.asPaddingValues()),
             ) {
                 when (selectedItem) {
                     0 -> DashboardScreen()

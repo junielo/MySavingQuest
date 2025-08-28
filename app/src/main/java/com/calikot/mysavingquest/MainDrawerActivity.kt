@@ -18,8 +18,11 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.Alignment
 import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
+import com.calikot.mysavingquest.component.DashboardScreen
+import com.calikot.mysavingquest.component.ActionNeededScreen
+import com.calikot.mysavingquest.component.HistoryScreen
+import com.calikot.mysavingquest.component.SettingsScreen
 import kotlinx.coroutines.launch
 
 class MainDrawerActivity : ComponentActivity() {
@@ -99,9 +102,14 @@ fun MainDrawerScreen(modifier: Modifier = Modifier) {
                     .fillMaxSize()
                     .padding(innerPadding)
                     .padding(WindowInsets.safeDrawing.asPaddingValues()),
-                contentAlignment = Alignment.Center
             ) {
-                Text(text = "${items[selectedItem]} Screen", style = MaterialTheme.typography.headlineMedium)
+                when (selectedItem) {
+                    0 -> DashboardScreen()
+                    1 -> ActionNeededScreen()
+                    2 -> HistoryScreen()
+                    3 -> SettingsScreen()
+                    else -> DashboardScreen()
+                }
             }
         }
     }

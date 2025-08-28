@@ -8,6 +8,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -29,19 +30,44 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.calikot.mysavingquest.R
 import com.calikot.mysavingquest.models.BillItem
-import com.calikot.mysavingquest.ui.theme.AppBackground
 import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import com.calikot.mysavingquest.setup.dialog.AddBillDialog
 
 class RecurringBillsActivity : ComponentActivity() {
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MySavingQuestTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+            MySavingQuestTheme(
+                darkTheme = isSystemInDarkTheme(),
+                dynamicColor = false
+            ) {
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    topBar = {
+                        TopAppBar(
+                            title = {
+                                RecurringBillsTopBar()
+                            },
+                            navigationIcon = {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_launcher_foreground), // Use your icon resource
+                                    contentDescription = "Back",
+                                    tint = Color.White
+                                )
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.secondary
+                            ),
+                            modifier = Modifier
+                                .shadow(8.dp, ambientColor = Color.Black, spotColor = Color.Black)
+                        )
+                    }
+                ) { innerPadding ->
                     RecurringBillsScreen(modifier = Modifier.padding(innerPadding))
                 }
             }
@@ -70,7 +96,7 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
     val fabOffsetX = remember { Animatable(0f) }
     val fabHiddenOffset = 300f // px to move FAB out of screen
     val fabVisibleOffset = 0f
-    val isScrolling by remember { derivedStateOf<Boolean> { listState.isScrollInProgress } }
+    val isScrolling by remember { derivedStateOf { listState.isScrollInProgress } }
 
     LaunchedEffect(isScrolling) {
         fabOffsetX.animateTo(
@@ -82,10 +108,9 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(AppBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            RecurringBillsTopBar()
             RecurringBillsList(bills = bills, listState = listState)
         }
         FloatingActionButton(
@@ -116,42 +141,28 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
 @Composable
 fun RecurringBillsTopBar() {
     val context = LocalContext.current
-    Surface(shadowElevation = 4.dp) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .background(Color.White)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Replace with your own icon resource if available
+        Text(
+            text = "Recurring Bills",
+            modifier = Modifier.weight(1f)
+        )
+        Button(
+            onClick = {
+                val intent = Intent(context, AccountBalanceActivity::class.java)
+                context.startActivity(intent)
+            },
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2C)),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+            modifier = Modifier.height(40.dp)
         ) {
-            // Replace with your own icon resource if available
-            Icon(
-                painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                contentDescription = "Bills Icon",
-                tint = Color.Black,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Recurring Bills",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                modifier = Modifier.weight(1f)
-            )
-            Button(
-                onClick = {
-                    val intent = Intent(context, AccountBalanceActivity::class.java)
-                    context.startActivity(intent)
-                },
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2C)),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                modifier = Modifier.height(40.dp)
-            ) {
-                Text("Next", color = Color.White, fontWeight = FontWeight.Bold)
-            }
+            Text("Next", color = Color.White, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -163,7 +174,7 @@ fun RecurringBillsList(bills: MutableList<BillItem>, listState: LazyListState) {
 
     LazyColumn(state = listState, modifier = Modifier.fillMaxWidth()) {
         itemsIndexed(bills, key = { _, bill -> bill.hashCode() }) { i, bill ->
-            var offsetX by remember { mutableStateOf(0f) }
+            var offsetX by remember { mutableFloatStateOf(0f) }
             val animatedOffsetX = remember { Animatable(0f) }
             val threshold = 200f
             val showDeleteIcon = offsetX < -40f
@@ -184,7 +195,7 @@ fun RecurringBillsList(bills: MutableList<BillItem>, listState: LazyListState) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.Transparent)
+                    .background(Color.White)
             ) {
                 // Delete icon background
                 if (showDeleteIcon) {
@@ -258,6 +269,7 @@ fun RecurringBillRow(bill: BillItem) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(Color.White)
             .padding(horizontal = 16.dp, vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

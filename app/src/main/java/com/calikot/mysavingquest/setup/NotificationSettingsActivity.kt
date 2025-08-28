@@ -6,11 +6,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -26,15 +26,45 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import com.calikot.mysavingquest.ui.theme.AppBackground
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.res.painterResource
+import com.calikot.mysavingquest.R
+import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
 import java.util.*
 
 class NotificationSettingsActivity : ComponentActivity() {
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                NotificationSettingsScreen(modifier = Modifier.padding(innerPadding))
+            MySavingQuestTheme(
+                darkTheme = isSystemInDarkTheme(),
+                dynamicColor = false
+            ) {
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    topBar = {
+                        TopAppBar(
+                            title = {
+                                NotificationSettingsTopBar()
+                            },
+                            navigationIcon = {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_launcher_foreground), // Use your icon resource
+                                    contentDescription = "Back",
+                                    tint = Color.White
+                                )
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.secondary
+                            ),
+                            modifier = Modifier
+                                .shadow(8.dp, ambientColor = Color.Black, spotColor = Color.Black)
+                        )
+                    }
+                ) { innerPadding ->
+                    NotificationSettingsScreen(modifier = Modifier.padding(innerPadding))
+                }
             }
         }
     }
@@ -46,12 +76,11 @@ fun NotificationSettingsScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
 
     Box(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
-            .background(AppBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            NotificationSettingsTopBar()
             NotificationSettingsBody(modifier)
         }
         FloatingActionButton(
@@ -75,23 +104,11 @@ fun NotificationSettingsTopBar() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp)
-            .background(Color.White)
-            .padding(horizontal = 16.dp),
+            .padding(end = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = Icons.Filled.Notifications,
-            contentDescription = "Notification Icon",
-            tint = Color.Black,
-            modifier = Modifier.size(32.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = "Notification Settings",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black,
             modifier = Modifier.weight(1f)
         )
         Button(

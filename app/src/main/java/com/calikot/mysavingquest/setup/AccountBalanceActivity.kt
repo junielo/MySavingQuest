@@ -8,6 +8,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -23,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -34,15 +36,39 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.calikot.mysavingquest.R
 import com.calikot.mysavingquest.models.AccountItem
-import com.calikot.mysavingquest.ui.theme.AppBackground
 import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
 
 class AccountBalanceActivity : ComponentActivity() {
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MySavingQuestTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+            MySavingQuestTheme(
+                darkTheme = isSystemInDarkTheme(),
+                dynamicColor = false
+            ) {
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    topBar = {
+                        TopAppBar(
+                            title = {
+                                AccountBalanceTopBar()
+                            },
+                            navigationIcon = {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_launcher_foreground), // Use your icon resource
+                                    contentDescription = "Back",
+                                    tint = Color.White
+                                )
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.secondary
+                            ),
+                            modifier = Modifier
+                                .shadow(8.dp, ambientColor = Color.Black, spotColor = Color.Black)
+                        )
+                    }
+                ) { innerPadding ->
                     AccountBalanceScreen(modifier = Modifier.padding(innerPadding))
                 }
             }
@@ -82,10 +108,9 @@ fun AccountBalanceScreen(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(AppBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            AccountBalanceTopBar()
             AccountBalanceList(accounts = accounts, listState = listState)
         }
         FloatingActionButton(
@@ -131,41 +156,27 @@ fun AccountBalanceScreen(modifier: Modifier = Modifier) {
 @Composable
 fun AccountBalanceTopBar() {
     val context = LocalContext.current
-    Surface(shadowElevation = 4.dp) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .background(Color.White)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Account Balance",
+            modifier = Modifier.weight(1f)
+        )
+        Button(
+            onClick = {
+                val intent = Intent(context, NotificationSettingsActivity::class.java)
+                context.startActivity(intent)
+            },
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2C)),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+            modifier = Modifier.height(40.dp)
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                contentDescription = "Account Icon",
-                tint = Color.Black,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Account Balance",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                modifier = Modifier.weight(1f)
-            )
-            Button(
-                onClick = {
-                    val intent = Intent(context, NotificationSettingsActivity::class.java)
-                    context.startActivity(intent)
-                },
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2C)),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                modifier = Modifier.height(40.dp)
-            ) {
-                Text("Next", color = Color.White, fontWeight = FontWeight.Bold)
-            }
+            Text("Next", color = Color.White, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -198,6 +209,7 @@ fun AccountBalanceList(accounts: MutableList<AccountItem>, listState: LazyListSt
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(Color.White)
                     .background(Color.Transparent)
             ) {
                 if (showDeleteIcon) {
@@ -271,6 +283,7 @@ fun AccountBalanceRow(account: AccountItem) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(Color.White)
             .padding(horizontal = 16.dp, vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

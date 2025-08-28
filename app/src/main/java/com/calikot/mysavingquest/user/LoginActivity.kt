@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -37,9 +39,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.calikot.mysavingquest.MainDrawerActivity
 import com.calikot.mysavingquest.R
 import com.calikot.mysavingquest.setup.RecurringBillsActivity
-import com.calikot.mysavingquest.ui.theme.AppBackground
 import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
 
 class LoginActivity : ComponentActivity() {
@@ -47,7 +49,10 @@ class LoginActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MySavingQuestTheme {
+            MySavingQuestTheme(
+                darkTheme = isSystemInDarkTheme(),
+                dynamicColor = false
+            ) {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     LoginScreen(modifier = Modifier.padding(innerPadding))
                 }
@@ -62,13 +67,13 @@ fun LoginScreen(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(AppBackground)
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {
         // Top-right Sign up button
         Button(
             onClick = {
-                val intent = Intent(context, RegisterActivity::class.java)
+                val intent = Intent(context, RecurringBillsActivity::class.java)
                 context.startActivity(intent)
             },
             modifier = modifier
@@ -129,7 +134,7 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                     // Sign In button
                     Button(
                         onClick = {
-                            val intent = Intent(context, RecurringBillsActivity::class.java)
+                            val intent = Intent(context, MainDrawerActivity::class.java)
                             context.startActivity(intent)
                         },
                         modifier = modifier

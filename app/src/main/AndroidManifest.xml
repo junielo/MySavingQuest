@@ -36,6 +36,10 @@
             android:name=".setup.NotificationSettingsActivity"
             android:exported="false"
             android:label="Notification Settings" />
+        <activity
+            android:name=".MainDrawerActivity"
+            android:exported="true"
+            android:label="Main Drawer" />
     </application>
 
 </manifest>

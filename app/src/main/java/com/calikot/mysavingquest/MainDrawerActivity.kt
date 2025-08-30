@@ -20,10 +20,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
 import com.calikot.mysavingquest.component.DashboardScreen
-import com.calikot.mysavingquest.component.ActionNeededScreen
+import com.calikot.mysavingquest.component.actionneededcomponent.ActionNeededScreen
 import com.calikot.mysavingquest.component.HistoryScreen
 import com.calikot.mysavingquest.component.SettingsScreen
 import kotlinx.coroutines.launch
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.calikot.mysavingquest.helper.NavRoutes
 
 class MainDrawerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,7 +50,6 @@ class MainDrawerActivity : ComponentActivity() {
 fun MainDrawerScreen(modifier: Modifier = Modifier) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    var selectedItem by remember { mutableIntStateOf(0) }
     val items = listOf("Dashboard", "Action Needed", "History", "Settings")
     val icons = listOf(
         Icons.Filled.Home,      // Dashboard
@@ -54,6 +57,9 @@ fun MainDrawerScreen(modifier: Modifier = Modifier) {
         Icons.AutoMirrored.Filled.List, // History
         Icons.Filled.Settings   // Settings
     )
+    val routes = NavRoutes.entries
+    val navController = rememberNavController()
+    var currentRoute by remember { mutableStateOf(routes[0]) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -71,9 +77,14 @@ fun MainDrawerScreen(modifier: Modifier = Modifier) {
                             )
                         },
                         label = { Text(item) },
-                        selected = selectedItem == index,
+                        selected = currentRoute == routes[index],
                         onClick = {
-                            selectedItem = index
+                            currentRoute = routes[index]
+                            navController.navigate(routes[index].route) {
+                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                             scope.launch { drawerState.close() }
                         },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -85,7 +96,7 @@ fun MainDrawerScreen(modifier: Modifier = Modifier) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(items[selectedItem]) },
+                    title = { Text(items[routes.indexOf(currentRoute)]) },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = "Menu")
@@ -102,12 +113,14 @@ fun MainDrawerScreen(modifier: Modifier = Modifier) {
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                when (selectedItem) {
-                    0 -> DashboardScreen()
-                    1 -> ActionNeededScreen()
-                    2 -> HistoryScreen()
-                    3 -> SettingsScreen()
-                    else -> DashboardScreen()
+                NavHost(
+                    navController = navController,
+                    startDestination = NavRoutes.DASHBOARD.route
+                ) {
+                    composable(NavRoutes.DASHBOARD.route) { DashboardScreen(navController) }
+                    composable(NavRoutes.ACTION_NEEDED.route) { ActionNeededScreen(navController) }
+                    composable(NavRoutes.HISTORY.route) { HistoryScreen(navController) }
+                    composable(NavRoutes.SETTINGS.route) { SettingsScreen(navController) }
                 }
             }
         }

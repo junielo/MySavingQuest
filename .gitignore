@@ -13,4 +13,4 @@
 .externalNativeBuild
 .cxx
 local.properties
-/app/src/main/java/com/calikot/mysavingquest/db/client/connection.kt
+/app/src/main/java/com/calikot/mysavingquest/db/client/

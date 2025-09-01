@@ -5,7 +5,7 @@ import io.github.jan.supabase.postgrest.Postgrest
 
 object connection {
     val supabase = createSupabaseClient(
-        supabaseUrl = "https://xyzcompany.supabase.co",
+        supabaseUrl = "https://fasdfa.supabase.co",
         supabaseKey = "your_public_anon_key"
     ) {
         install(Postgrest)

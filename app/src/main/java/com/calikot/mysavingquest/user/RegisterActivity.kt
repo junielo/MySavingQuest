@@ -1,5 +1,6 @@
 package com.calikot.mysavingquest.user
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -42,6 +43,11 @@ class RegisterActivity : ComponentActivity() {
 @Composable
 fun RegisterScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    var fullName by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -90,8 +96,8 @@ fun RegisterScreen(modifier: Modifier = Modifier) {
                         .fillMaxWidth()
                 ) {
                     OutlinedTextField(
-                        value = "",
-                        onValueChange = { /* TODO */ },
+                        value = fullName,
+                        onValueChange = { fullName = it },
                         label = { Text("Full Name", style = MaterialTheme.typography.bodySmall) },
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -99,8 +105,8 @@ fun RegisterScreen(modifier: Modifier = Modifier) {
                     Spacer(modifier = Modifier.height(15.dp))
 
                     OutlinedTextField(
-                        value = "",
-                        onValueChange = { /* TODO */ },
+                        value = email,
+                        onValueChange = { email = it },
                         label = { Text("Email", style = MaterialTheme.typography.bodySmall) },
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -108,8 +114,8 @@ fun RegisterScreen(modifier: Modifier = Modifier) {
                     Spacer(modifier = Modifier.height(15.dp))
 
                     OutlinedTextField(
-                        value = "",
-                        onValueChange = { /* TODO */ },
+                        value = password,
+                        onValueChange = { password = it },
                         label = { Text("Password", style = MaterialTheme.typography.bodySmall) },
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
@@ -118,8 +124,8 @@ fun RegisterScreen(modifier: Modifier = Modifier) {
                     Spacer(modifier = Modifier.height(15.dp))
 
                     OutlinedTextField(
-                        value = "",
-                        onValueChange = { /* TODO */ },
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
                         label = { Text("Confirm Password", style = MaterialTheme.typography.bodySmall) },
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
@@ -129,7 +135,9 @@ fun RegisterScreen(modifier: Modifier = Modifier) {
 
                     // Sign In button
                     Button(
-                        onClick = { /* TODO: handle sign in */ },
+                        onClick = {
+                            registerUser(context, fullName, email, password, confirmPassword)
+                        },
                         modifier = modifier
                             .fillMaxWidth()
                             .height(50.dp),
@@ -154,3 +162,30 @@ fun RegisterScreen(modifier: Modifier = Modifier) {
     }
 }
 
+fun registerUser(context: Context, fullName: String, email: String, password: String, confirmPassword: String) {
+    val errorMsg = validateRegistrationForm(fullName, email, password, confirmPassword)
+    if (errorMsg == null) {
+        android.widget.Toast.makeText(context, "Registration form is valid!", android.widget.Toast.LENGTH_SHORT).show()
+    } else {
+        android.widget.Toast.makeText(context, errorMsg, android.widget.Toast.LENGTH_SHORT).show()
+    }
+}
+
+fun validateRegistrationForm(
+    fullName: String,
+    email: String,
+    password: String,
+    confirmPassword: String
+): String? {
+    val isEmailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    val isPasswordValid = password.isNotEmpty() && password.length >= 6
+    val isFullNameValid = fullName.isNotEmpty()
+    val isConfirmPasswordValid = password == confirmPassword
+    return when {
+        !isFullNameValid -> "Full Name is required."
+        !isEmailValid -> "Invalid email address."
+        !isPasswordValid -> "Password must be at least 6 characters."
+        !isConfirmPasswordValid -> "Passwords do not match."
+        else -> null
+    }
+}

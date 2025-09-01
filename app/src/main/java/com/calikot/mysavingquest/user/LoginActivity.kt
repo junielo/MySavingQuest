@@ -73,7 +73,7 @@ fun LoginScreen(modifier: Modifier = Modifier) {
         // Top-right Sign up button
         Button(
             onClick = {
-                val intent = Intent(context, RecurringBillsActivity::class.java)
+                val intent = Intent(context, RegisterActivity::class.java)
                 context.startActivity(intent)
             },
             modifier = modifier

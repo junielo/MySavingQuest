@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -52,6 +53,10 @@ dependencies {
     implementation(libs.androidx.foundation)
     implementation(libs.espresso.core)
     implementation("androidx.navigation:navigation-compose:2.9.3")
+    implementation("com.google.firebase:firebase-auth:24.0.1")
+    implementation("com.google.android.gms:play-services-auth:21.4.0")
+    implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
+    implementation("com.google.firebase:firebase-analytics")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -60,3 +65,5 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
+
+apply(plugin = "com.google.gms.google-services")

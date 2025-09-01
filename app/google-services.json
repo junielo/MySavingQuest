@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "301365884225",
+    "project_id": "my-saving-quest",
+    "storage_bucket": "my-saving-quest.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:301365884225:android:4f0fdc3a0a4ffb0bc31dc0",
+        "android_client_info": {
+          "package_name": "com.calikot.mysavingquest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "301365884225-fd14j9d6ao18bfi9eaiiaki4hk1cm1ld.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjUugcXHqDR6UcTJW6IEI8tSEn1cXaJj8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "301365884225-fd14j9d6ao18bfi9eaiiaki4hk1cm1ld.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

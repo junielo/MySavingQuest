@@ -53,7 +53,7 @@ dependencies {
     implementation(libs.androidx.foundation)
     implementation(libs.espresso.core)
     implementation("androidx.navigation:navigation-compose:2.9.3")
-    implementation(platform("io.github.jan-tennert.supabase:bom:3.2.2"))
+    implementation(platform("io.github.jan-tennert.supabase:bom:3.0.0"))
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.ktor:ktor-client-android:3.2.3")
     testImplementation(libs.junit)

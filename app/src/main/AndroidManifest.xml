@@ -12,7 +12,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MySavingQuest">
         <activity
-            android:name=".user.LoginActivity"
+            android:name=".component.user.login.LoginActivity"
             android:exported="true"
             android:theme="@style/Theme.MySavingQuest">
             <intent-filter>
@@ -22,23 +22,23 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".user.RegisterActivity"
+            android:name=".component.user.register.RegisterActivity"
             android:exported="false"
             android:label="Register" />
         <activity
-            android:name=".setup.RecurringBillsActivity"
+            android:name=".component.setup.recurringbills.ui.RecurringBillsActivity"
             android:exported="false"
             android:label="Recurring Bills" />
         <activity
-            android:name=".setup.AccountBalanceActivity"
+            android:name=".component.setup.accountbalance.ui.AccountBalanceActivity"
             android:exported="false"
             android:label="Recurring Bills" />
         <activity
-            android:name=".setup.NotificationSettingsActivity"
+            android:name=".component.setup.notification.NotificationSettingsActivity"
             android:exported="false"
             android:label="Notification Settings" />
         <activity
-            android:name=".MainDrawerActivity"
+            android:name=".component.navpages.drawer.MainDrawerActivity"
             android:exported="true"
             android:label="Main Drawer" />
     </application>

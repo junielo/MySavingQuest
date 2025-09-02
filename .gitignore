@@ -13,6 +13,5 @@
 .externalNativeBuild
 .cxx
 local.properties
-/app/src/main/java/com/calikot/mysavingquest/db/client/
-/app/src/main/java/com/calikot/mysavingquest/db/client/
 /app/src/main/java/com/calikot/mysavingquest/util/SupabaseConnection.kt
+/app/src/main/java/com/calikot/mysavingquest/conn/

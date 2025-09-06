@@ -1,9 +1,6 @@
-package com.calikot.mysavingquest.component.user.register
+package com.calikot.mysavingquest.component.user.register.ui
 
-import android.content.Context
 import android.os.Bundle
-import android.util.Patterns
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -25,16 +22,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.calikot.mysavingquest.R
+import com.calikot.mysavingquest.component.user.register.domain.RegisterVM
 import com.calikot.mysavingquest.ui.theme.AppBackground
 import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
-import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.postgrest.Postgrest
-import io.github.jan.supabase.postgrest.from
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-
+import com.calikot.mysavingquest.util.SupabaseHandler
 
 
 class RegisterActivity : ComponentActivity() {
@@ -54,10 +45,23 @@ class RegisterActivity : ComponentActivity() {
 @Composable
 fun RegisterScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val registerVM = remember { RegisterVM() }
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var showWelcomeDialog by remember { mutableStateOf(false) }
+    var showLoadingDialog by remember { mutableStateOf(false) }
+    var errorDialogMessage by remember { mutableStateOf<String?>(null) }
+
+//    SessionSignUpListener { showWelcomeDialog = true }
+    WelcomeDialog(showDialog = showWelcomeDialog, onContinue = {
+        showWelcomeDialog = false
+        (context as? ComponentActivity)?.finish()
+    }, onResend = {
+        // Handle resend verification email
+        registerVM.resendVerificationEmail(context, email)
+    })
 
     Box(
         modifier = modifier
@@ -147,7 +151,22 @@ fun RegisterScreen(modifier: Modifier = Modifier) {
                     // Sign In button
                     Button(
                         onClick = {
-                            registerUser(context, fullName, email, password, confirmPassword)
+                            showLoadingDialog = true
+                            registerVM.registerUser(
+                                context,
+                                fullName,
+                                email,
+                                password,
+                                confirmPassword,
+                                onFinished = {
+                                    showLoadingDialog = false
+                                    showWelcomeDialog = true
+                                },
+                                onError = { errorMsg ->
+                                    showLoadingDialog = false
+                                    errorDialogMessage = errorMsg
+                                }
+                            )
                         },
                         modifier = modifier
                             .fillMaxWidth()
@@ -170,33 +189,78 @@ fun RegisterScreen(modifier: Modifier = Modifier) {
                 }
             }
         }
+
+        LoadingDialog(showDialog = showLoadingDialog)
+        ErrorDialog(errorDialogMessage) { errorDialogMessage = null }
     }
 }
 
-fun registerUser(context: Context, fullName: String, email: String, password: String, confirmPassword: String) {
-    val errorMsg = validateRegistrationForm(fullName, email, password, confirmPassword)
-    if (errorMsg == null) {
-        Toast.makeText(context, "Registration form is valid!", Toast.LENGTH_SHORT).show()
-    } else {
-        Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()
+//@Composable
+//fun SessionSignUpListener(onSignUp: () -> Unit) {
+//    LaunchedEffect(Unit) {
+//        SupabaseHandler.sessionEvents.collect { event ->
+//            if (event is SupabaseHandler.SessionEvent.SignUp) {
+//                onSignUp()
+//            }
+//        }
+//    }
+//}
+
+@Composable
+fun WelcomeDialog(showDialog: Boolean, onContinue: () -> Unit, onResend: () -> Unit) {
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = {}, // Unclosable by tapping outside
+            title = { Text("Check Your Email") },
+            text = {
+                Text("Your account has been created. Please check your email for a verification link to activate your account. If you did not receive the email, you can resend the verification.")
+            },
+            confirmButton = {
+                Button(onClick = onContinue) {
+                    Text("Continue")
+                }
+            },
+            dismissButton = {
+                Button(onClick = onResend) {
+                    Text("Resend Verification Email")
+                }
+            }
+        )
     }
 }
 
-fun validateRegistrationForm(
-    fullName: String,
-    email: String,
-    password: String,
-    confirmPassword: String
-): String? {
-    val isEmailValid = Patterns.EMAIL_ADDRESS.matcher(email).matches()
-    val isPasswordValid = password.isNotEmpty() && password.length >= 6
-    val isFullNameValid = fullName.isNotEmpty()
-    val isConfirmPasswordValid = password == confirmPassword
-    return when {
-        !isFullNameValid -> "Full Name is required."
-        !isEmailValid -> "Invalid email address."
-        !isPasswordValid -> "Password must be at least 6 characters."
-        !isConfirmPasswordValid -> "Passwords do not match."
-        else -> null
+@Composable
+fun LoadingDialog(showDialog: Boolean) {
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Registering...") },
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text("Please wait while we create your account.")
+                }
+            },
+            confirmButton = {},
+            dismissButton = null
+        )
+    }
+}
+
+@Composable
+fun ErrorDialog(errorMessage: String?, onDismiss: () -> Unit) {
+    if (errorMessage != null) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Registration Error") },
+            text = { Text(errorMessage) },
+            confirmButton = {
+                Button(onClick = onDismiss) {
+                    Text("OK")
+                }
+            },
+            dismissButton = null
+        )
     }
 }

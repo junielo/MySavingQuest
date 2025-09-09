@@ -25,9 +25,10 @@ import com.calikot.mysavingquest.R
 import com.calikot.mysavingquest.component.user.register.domain.RegisterVM
 import com.calikot.mysavingquest.ui.theme.AppBackground
 import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
-import com.calikot.mysavingquest.util.SupabaseHandler
+import androidx.hilt.navigation.compose.hiltViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
-
+@AndroidEntryPoint
 class RegisterActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,7 +46,7 @@ class RegisterActivity : ComponentActivity() {
 @Composable
 fun RegisterScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val registerVM = remember { RegisterVM() }
+    val registerVM: RegisterVM = hiltViewModel()
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }

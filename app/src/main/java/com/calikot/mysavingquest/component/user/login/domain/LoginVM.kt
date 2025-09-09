@@ -4,15 +4,16 @@ import android.content.Context
 import android.util.Patterns
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
-import com.calikot.mysavingquest.conn.Connections.supabase
-import com.calikot.mysavingquest.di.service.resendVerificationEmail
-import com.calikot.mysavingquest.di.service.signInUser
-import io.github.jan.supabase.postgrest.from
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import com.calikot.mysavingquest.di.service.UserHandlerService
 import kotlinx.coroutines.launch
 
-class LoginVM : ViewModel() {
+@HiltViewModel
+class LoginVM @Inject constructor(
+    private val userHandlerService: UserHandlerService
+) : ViewModel() {
     fun signIn(
         context: Context,
         email: String,
@@ -22,30 +23,22 @@ class LoginVM : ViewModel() {
             Toast.makeText(context, "Invalid email address.", Toast.LENGTH_SHORT).show()
             return
         }
-        CoroutineScope(Dispatchers.IO).launch {
+        viewModelScope.launch {
             try {
-                signInUser(email, password)
+                userHandlerService.signInUser(email, password)
             } catch (e: Exception) {
                 Toast.makeText(context, e.message ?: "Sign in failed.", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    fun resendVerificationEmail(context: android.content.Context, email: String) {
-        CoroutineScope(Dispatchers.IO).launch {
+    fun resendVerificationEmail(context: Context, email: String) {
+        viewModelScope.launch {
             try {
-                resendVerificationEmail(email)
-//                val response = supabase.from("user_profile").select()
-//                val data = response.data
-//                println("user_profile: $data")
-                // Show a toast on success
-                launch(Dispatchers.Main) {
-                    Toast.makeText(context, "Verification email resent!", Toast.LENGTH_SHORT).show()
-                }
+                userHandlerService.resendVerificationEmail(email)
+                Toast.makeText(context, "Verification email resent!", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                launch(Dispatchers.Main) {
-                    Toast.makeText(context, "Failed to resend verification email: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+                Toast.makeText(context, "Failed to resend verification email: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }

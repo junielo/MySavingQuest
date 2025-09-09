@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     kotlin("plugin.serialization") version libs.versions.kotlin.get()
+    id("com.google.devtools.ksp")
+    id("com.google.dagger.hilt.android")
 }
 
 android {
@@ -41,7 +43,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -52,10 +53,20 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.foundation)
     implementation(libs.espresso.core)
+    //noinspection UseTomlInstead
     implementation("androidx.navigation:navigation-compose:2.9.3")
-    implementation(platform("io.github.jan-tennert.supabase:bom:3.0.0"))
+    //noinspection UseTomlInstead
+    implementation(platform("io.github.jan-tennert.supabase:bom:3.0.1"))
+    //noinspection UseTomlInstead
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
+    //noinspection UseTomlInstead
     implementation("io.ktor:ktor-client-android:3.2.3")
+    //noinspection UseTomlInstead
+    implementation("com.google.dagger:hilt-android:2.51.1")
+    //noinspection UseTomlInstead
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    //noinspection UseTomlInstead
+    ksp("com.google.dagger:hilt-android-compiler:2.51.1")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -64,4 +75,3 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
-

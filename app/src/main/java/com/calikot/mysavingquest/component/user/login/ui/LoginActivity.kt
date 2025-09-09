@@ -55,7 +55,10 @@ import com.calikot.mysavingquest.conn.Connections.supabase
 import com.calikot.mysavingquest.util.SupabaseHandler
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.handleDeeplinks
+import androidx.hilt.navigation.compose.hiltViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,7 +87,7 @@ class LoginActivity : ComponentActivity() {
 @Composable
 fun LoginScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val loginVM = remember { LoginVM() }
+    val loginVM: LoginVM = hiltViewModel()
     val email = remember { mutableStateOf("") }
     val password = remember { mutableStateOf("") }
     val showLoadingDialog = remember { mutableStateOf(false) }

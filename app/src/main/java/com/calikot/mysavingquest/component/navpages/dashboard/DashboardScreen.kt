@@ -53,7 +53,7 @@ fun DashboardScreen(navController: NavController) {
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Total Funds",
+                            text = "Available Balance",
                             fontSize = 12.sp,
                             color = Color.Gray
                         )

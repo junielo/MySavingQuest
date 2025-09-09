@@ -1,5 +1,6 @@
 package com.calikot.mysavingquest.component.user.login.domain
 
+import android.content.Context
 import android.util.Patterns
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
@@ -13,20 +14,19 @@ import kotlinx.coroutines.launch
 
 class LoginVM : ViewModel() {
     fun signIn(
+        context: Context,
         email: String,
         password: String,
-        onResult: (Boolean, String?) -> Unit
     ) {
         if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            onResult(false, "Invalid email address.")
+            Toast.makeText(context, "Invalid email address.", Toast.LENGTH_SHORT).show()
             return
         }
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 signInUser(email, password)
-                onResult(true, null)
             } catch (e: Exception) {
-                onResult(false, e.message ?: "Sign in failed.")
+                Toast.makeText(context, e.message ?: "Sign in failed.", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -34,10 +34,10 @@ class LoginVM : ViewModel() {
     fun resendVerificationEmail(context: android.content.Context, email: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-//                resendVerificationEmail(email)
-                val response = supabase.from("user_profile").select()
-                val data = response.data
-                println("user_profile: $data")
+                resendVerificationEmail(email)
+//                val response = supabase.from("user_profile").select()
+//                val data = response.data
+//                println("user_profile: $data")
                 // Show a toast on success
                 launch(Dispatchers.Main) {
                     Toast.makeText(context, "Verification email resent!", Toast.LENGTH_SHORT).show()

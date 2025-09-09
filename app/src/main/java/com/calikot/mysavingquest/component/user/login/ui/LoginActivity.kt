@@ -1,5 +1,6 @@
 package com.calikot.mysavingquest.component.user.login.ui
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -7,7 +8,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +32,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,7 +43,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.calikot.mysavingquest.component.navpages.drawer.MainDrawerActivity
 import com.calikot.mysavingquest.R
@@ -52,6 +52,8 @@ import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
 import com.calikot.mysavingquest.util.SupabaseHandler.startSessionListener
 import com.calikot.mysavingquest.component.user.login.domain.LoginVM
 import com.calikot.mysavingquest.conn.Connections.supabase
+import com.calikot.mysavingquest.util.SupabaseHandler
+import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.handleDeeplinks
 
 class LoginActivity : ComponentActivity() {
@@ -89,23 +91,14 @@ fun LoginScreen(modifier: Modifier = Modifier) {
     val errorDialogMessage = remember { mutableStateOf<String?>(null) }
     val resendToggle = remember { mutableStateOf(false) }
 
-    fun handleSignIn() {
-        showLoadingDialog.value = true
-        loginVM.signIn(email.value, password.value) { success, errorMsg ->
-            showLoadingDialog.value = false
-            if (success) {
-                val intent = Intent(context, MainDrawerActivity::class.java)
-                context.startActivity(intent)
-            } else {
-                errorDialogMessage.value = errorMsg
-            }
-        }
-    }
+    checkSessionCurrentUser(context)
 
-    fun handleResendVerification() {
-        showLoadingDialog.value = true
-        loginVM.resendVerificationEmail(context, email.value)
-        showLoadingDialog.value = false
+    SessionSignInListener {
+        val intent = Intent(context, MainDrawerActivity::class.java)
+        context.startActivity(intent)
+        if (context is ComponentActivity) {
+            context.finish()
+        }
     }
 
     Box(
@@ -176,7 +169,15 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                         Spacer(modifier = Modifier.height(15.dp))
                         // Sign In button
                         Button(
-                            onClick = { handleSignIn() },
+                            onClick = {
+                                handleSignIn(
+                                    context,
+                                    loginVM,
+                                    email,
+                                    password,
+                                    showLoadingDialog
+                                )
+                            },
                             modifier = modifier
                                 .fillMaxWidth()
                                 .height(50.dp),
@@ -187,7 +188,7 @@ fun LoginScreen(modifier: Modifier = Modifier) {
                         }
                     } else {
                         Button(
-                            onClick = { handleResendVerification() },
+                            onClick = { handleResendVerification(context, loginVM, email, showLoadingDialog) },
                             modifier = modifier
                                 .fillMaxWidth()
                                 .height(50.dp),
@@ -226,6 +227,11 @@ fun LoginScreen(modifier: Modifier = Modifier) {
     }
 }
 
+fun checkSessionCurrentUser(context: Context) {
+    val session = supabase.auth.currentSessionOrNull()
+    println("Current session: $session")
+}
+
 @Composable
 fun LoadingDialog(showDialog: Boolean) {
     if (showDialog) {
@@ -233,7 +239,7 @@ fun LoadingDialog(showDialog: Boolean) {
             onDismissRequest = {},
             title = { Text("Signing In...") },
             text = {
-                androidx.compose.foundation.layout.Row(
+                Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     androidx.compose.material3.CircularProgressIndicator()
@@ -262,4 +268,37 @@ fun ErrorDialog(errorMessage: String?, onDismiss: () -> Unit) {
             dismissButton = null
         )
     }
+}
+
+@Composable
+fun SessionSignInListener(onSignIn: () -> Unit) {
+    LaunchedEffect(Unit) {
+        SupabaseHandler.sessionEvents.collect { event ->
+            if (event is SupabaseHandler.SessionEvent.SignIn) {
+                onSignIn()
+            }
+        }
+    }
+}
+
+fun handleSignIn(
+    context: Context,
+    loginVM: LoginVM,
+    email: MutableState<String>,
+    password: MutableState<String>,
+    showLoadingDialog: MutableState<Boolean>,
+) {
+    showLoadingDialog.value = true
+    loginVM.signIn(context, email.value, password.value)
+}
+
+fun handleResendVerification(
+    context: Context,
+    loginVM: LoginVM,
+    email: MutableState<String>,
+    showLoadingDialog: MutableState<Boolean>
+) {
+    showLoadingDialog.value = true
+    loginVM.resendVerificationEmail(context, email.value)
+    showLoadingDialog.value = false
 }

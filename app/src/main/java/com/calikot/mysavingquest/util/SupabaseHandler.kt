@@ -21,6 +21,7 @@ object SupabaseHandler {
                 when (status) {
                     is SessionStatus.Authenticated -> {
                         println("Received new authenticated session.")
+                        println("Session source: ${status.source}")
                         when (status.source) {
                             SessionSource.External -> emitEvent(SessionEvent.External)
                             is SessionSource.Refresh -> emitEvent(SessionEvent.Refresh)

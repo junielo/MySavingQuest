@@ -3,9 +3,11 @@ package com.calikot.mysavingquest.component.user.login.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -53,22 +55,30 @@ import com.calikot.mysavingquest.util.SupabaseHandler.startSessionListener
 import com.calikot.mysavingquest.component.user.login.domain.LoginVM
 import com.calikot.mysavingquest.conn.Connections.supabase
 import com.calikot.mysavingquest.util.SupabaseHandler
-import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.handleDeeplinks
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.lifecycleScope
+import com.calikot.mysavingquest.component.setup.accountbalance.ui.AccountBalanceActivity
+import com.calikot.mysavingquest.component.setup.notification.NotificationSettingsActivity
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class LoginActivity : ComponentActivity() {
+    private val loginVM: LoginVM by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         startSessionListener()
         supabase.handleDeeplinks(
             intent,
         ) { session ->
-            val intent = Intent(this, RecurringBillsActivity::class.java)
-            startActivity(intent)
-            finish()
+            lifecycleScope.launch {
+                val setupStatusMsg = loginVM.insertUserSetupStatus()
+                Toast.makeText(this@LoginActivity, setupStatusMsg, Toast.LENGTH_SHORT).show()
+                val intent = Intent(this@LoginActivity, RecurringBillsActivity::class.java)
+                startActivity(intent)
+                finish()
+            }
         }
         enableEdgeToEdge()
         setContent {
@@ -77,7 +87,7 @@ class LoginActivity : ComponentActivity() {
                 dynamicColor = false
             ) {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    LoginScreen(modifier = Modifier.padding(innerPadding))
+                    LoginScreen(modifier = Modifier.padding(innerPadding), loginVM = loginVM)
                 }
             }
         }
@@ -85,16 +95,15 @@ class LoginActivity : ComponentActivity() {
 }
 
 @Composable
-fun LoginScreen(modifier: Modifier = Modifier) {
+fun LoginScreen(modifier: Modifier = Modifier, loginVM: LoginVM) {
     val context = LocalContext.current
-    val loginVM: LoginVM = hiltViewModel()
     val email = remember { mutableStateOf("") }
     val password = remember { mutableStateOf("") }
     val showLoadingDialog = remember { mutableStateOf(false) }
     val errorDialogMessage = remember { mutableStateOf<String?>(null) }
     val resendToggle = remember { mutableStateOf(false) }
 
-    checkSessionCurrentUser(context)
+    CheckAndNavigateIfLoggedIn(context, loginVM)
 
     SessionSignInListener {
         val intent = Intent(context, MainDrawerActivity::class.java)
@@ -230,9 +239,43 @@ fun LoginScreen(modifier: Modifier = Modifier) {
     }
 }
 
-fun checkSessionCurrentUser(context: Context) {
-    val session = supabase.auth.currentSessionOrNull()
-    println("Current session: $session")
+@Composable
+fun CheckAndNavigateIfLoggedIn(context: Context, loginVM: LoginVM) {
+    LaunchedEffect(Unit) {
+        val session = loginVM.getUserSession()
+        if (session != null) {
+            val name = session.user?.identities?.get(0)?.identityData?.get("full_name")?.toString()
+            val displayName = if (!name.isNullOrBlank()) name else session.user?.email
+            Toast.makeText(context, "Welcome, $displayName!", Toast.LENGTH_LONG).show()
+            val setupStatus = loginVM.getCurrentUserSetupStatus()
+            when {
+                !setupStatus.recurring_bills -> {
+                    val intent = Intent(context, RecurringBillsActivity::class.java)
+                    context.startActivity(intent)
+                    if (context is ComponentActivity) context.finish()
+                }
+                !setupStatus.account_balance -> {
+                    val intent = Intent(context, AccountBalanceActivity::class.java)
+                    context.startActivity(intent)
+                    if (context is ComponentActivity) context.finish()
+                }
+                !setupStatus.notif_settings -> {
+                    val intent = Intent(context, NotificationSettingsActivity::class.java)
+                    context.startActivity(intent)
+                    if (context is ComponentActivity) context.finish()
+                }
+                else -> {
+                    if (setupStatus.errorMessage == null) {
+                        Toast.makeText(context, "Welcome, $displayName!", Toast.LENGTH_LONG).show()
+                    } else {
+                        val intent = Intent(context, MainDrawerActivity::class.java)
+                        context.startActivity(intent)
+                        if (context is ComponentActivity) context.finish()
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

@@ -5,14 +5,18 @@ import android.util.Patterns
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.calikot.mysavingquest.component.user.login.domain.models.UserSetupStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import com.calikot.mysavingquest.di.service.UserHandlerService
+import com.calikot.mysavingquest.di.global.UserAuthState
+import io.github.jan.supabase.auth.user.UserSession
 import kotlinx.coroutines.launch
 
 @HiltViewModel
 class LoginVM @Inject constructor(
-    private val userHandlerService: UserHandlerService
+    private val userHandlerService: UserHandlerService,
+    private val userAuthState: UserAuthState
 ) : ViewModel() {
     fun signIn(
         context: Context,
@@ -42,4 +46,27 @@ class LoginVM @Inject constructor(
             }
         }
     }
+
+    fun getUserSession(): UserSession? {
+        return userAuthState.getUserLoggedIn()
+    }
+
+    suspend fun insertUserSetupStatus(): String {
+        val result = userHandlerService.insertUserSetupStatus()
+        return if (result.isSuccess) {
+            "User setup status initialized."
+        } else {
+            "Failed to initialize user setup status: ${result.exceptionOrNull()?.message}"
+        }
+    }
+
+    suspend fun getCurrentUserSetupStatus(): UserSetupStatus {
+        val result = userHandlerService.getCurrentUserSetupStatus()
+        return if (result.isSuccess) {
+            result.getOrNull() ?: UserSetupStatus()
+        } else {
+            UserSetupStatus(errorMessage = result.exceptionOrNull()?.message)
+        }
+    }
+
 }

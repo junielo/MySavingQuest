@@ -16,24 +16,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.calikot.mysavingquest.component.setup.recurringbills.domain.models.BillItem
+import com.calikot.mysavingquest.component.setup.recurringbills.domain.models.RecurringBillItem
 import androidx.navigation.NavController
 
 @Composable
 fun HistoryScreen(navController: NavController) {
-    val defaultBills = listOf(
-        BillItem("House Rent", "Every 5th day of the month", 10000, false),
-        BillItem("Loklok", "Every 21st day of the month", 209, true),
-        BillItem("Youtube Premium", "Every 1st day of the month", 589, true),
-        BillItem("Github Copilot", "Every 28th day of the month", 580, true),
-        BillItem("Netflix", "Every 10th day of the month", 150, true),
-        BillItem("Spotify", "Every 15th day of the month", 99, true),
-        BillItem("Apple Music", "Every 12th day of the month", 129, true),
-        BillItem("Internet", "Every 2nd day of the month", 499, false),
-        BillItem("Electricity", "Every 7th day of the month", 1200, false),
-        BillItem("Water", "Every 8th day of the month", 300, false)
-    )
-    val bills = remember { mutableStateListOf<BillItem>().apply { addAll(defaultBills) } }
+    val defaultBills = listOf<RecurringBillItem>()
+    val bills = remember { mutableStateListOf<RecurringBillItem>().apply { addAll(defaultBills) } }
     val listState = rememberLazyListState()
     Box(
         modifier = Modifier
@@ -45,7 +34,7 @@ fun HistoryScreen(navController: NavController) {
 }
 
 @Composable
-fun RecurringBillsList(bills: List<BillItem>, listState: LazyListState) {
+fun RecurringBillsList(bills: List<RecurringBillItem>, listState: LazyListState) {
     LazyColumn(state = listState, modifier = Modifier.fillMaxWidth()) {
         itemsIndexed(bills, key = { _, bill -> bill.hashCode() }) { i, bill ->
             Box(
@@ -61,7 +50,7 @@ fun RecurringBillsList(bills: List<BillItem>, listState: LazyListState) {
 }
 
 @Composable
-fun RecurringBillRow(bill: BillItem) {
+fun RecurringBillRow(bill: RecurringBillItem) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

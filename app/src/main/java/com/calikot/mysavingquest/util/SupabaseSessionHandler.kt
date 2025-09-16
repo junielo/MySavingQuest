@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 
-object SupabaseHandler {
+object SupabaseSessionHandler {
     // Event emitter for session status changes
     private val _sessionEvents = MutableSharedFlow<SessionEvent>(extraBufferCapacity = 1)
     val sessionEvents: SharedFlow<SessionEvent> = _sessionEvents

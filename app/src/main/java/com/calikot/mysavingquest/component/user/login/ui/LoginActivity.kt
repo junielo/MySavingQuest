@@ -51,15 +51,16 @@ import com.calikot.mysavingquest.R
 import com.calikot.mysavingquest.component.setup.recurringbills.ui.RecurringBillsActivity
 import com.calikot.mysavingquest.component.user.register.ui.RegisterActivity
 import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
-import com.calikot.mysavingquest.util.SupabaseHandler.startSessionListener
+import com.calikot.mysavingquest.util.SupabaseSessionHandler.startSessionListener
 import com.calikot.mysavingquest.component.user.login.domain.LoginVM
 import com.calikot.mysavingquest.conn.Connections.supabase
-import com.calikot.mysavingquest.util.SupabaseHandler
+import com.calikot.mysavingquest.util.SupabaseSessionHandler
 import io.github.jan.supabase.auth.handleDeeplinks
 import androidx.lifecycle.lifecycleScope
 import com.calikot.mysavingquest.component.setup.accountbalance.ui.AccountBalanceActivity
 import com.calikot.mysavingquest.component.setup.notification.NotificationSettingsActivity
 import dagger.hilt.android.AndroidEntryPoint
+import io.github.jan.supabase.auth.user.UserSession
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -104,14 +105,7 @@ fun LoginScreen(modifier: Modifier = Modifier, loginVM: LoginVM) {
     val resendToggle = remember { mutableStateOf(false) }
 
     CheckAndNavigateIfLoggedIn(context, loginVM)
-
-    SessionSignInListener {
-        val intent = Intent(context, MainDrawerActivity::class.java)
-        context.startActivity(intent)
-        if (context is ComponentActivity) {
-            context.finish()
-        }
-    }
+    SessionSignInListener(loginVM, context)
 
     Box(
         modifier = modifier
@@ -244,36 +238,7 @@ fun CheckAndNavigateIfLoggedIn(context: Context, loginVM: LoginVM) {
     LaunchedEffect(Unit) {
         val session = loginVM.getUserSession()
         if (session != null) {
-            val name = session.user?.identities?.get(0)?.identityData?.get("full_name")?.toString()
-            val displayName = if (!name.isNullOrBlank()) name else session.user?.email
-            Toast.makeText(context, "Welcome, $displayName!", Toast.LENGTH_LONG).show()
-            val setupStatus = loginVM.getCurrentUserSetupStatus()
-            when {
-                !setupStatus.recurring_bills -> {
-                    val intent = Intent(context, RecurringBillsActivity::class.java)
-                    context.startActivity(intent)
-                    if (context is ComponentActivity) context.finish()
-                }
-                !setupStatus.account_balance -> {
-                    val intent = Intent(context, AccountBalanceActivity::class.java)
-                    context.startActivity(intent)
-                    if (context is ComponentActivity) context.finish()
-                }
-                !setupStatus.notif_settings -> {
-                    val intent = Intent(context, NotificationSettingsActivity::class.java)
-                    context.startActivity(intent)
-                    if (context is ComponentActivity) context.finish()
-                }
-                else -> {
-                    if (setupStatus.errorMessage == null) {
-                        Toast.makeText(context, "Welcome, $displayName!", Toast.LENGTH_LONG).show()
-                    } else {
-                        val intent = Intent(context, MainDrawerActivity::class.java)
-                        context.startActivity(intent)
-                        if (context is ComponentActivity) context.finish()
-                    }
-                }
-            }
+            navigateBasedOnSetupStatus(loginVM, context, session)
         }
     }
 }
@@ -317,11 +282,14 @@ fun ErrorDialog(errorMessage: String?, onDismiss: () -> Unit) {
 }
 
 @Composable
-fun SessionSignInListener(onSignIn: () -> Unit) {
+fun SessionSignInListener(loginVM: LoginVM, context: Context) {
     LaunchedEffect(Unit) {
-        SupabaseHandler.sessionEvents.collect { event ->
-            if (event is SupabaseHandler.SessionEvent.SignIn) {
-                onSignIn()
+        SupabaseSessionHandler.sessionEvents.collect { event ->
+            if (event is SupabaseSessionHandler.SessionEvent.SignIn) {
+                val session = loginVM.getUserSession()
+                if (session != null) {
+                    navigateBasedOnSetupStatus(loginVM, context, session)
+                }
             }
         }
     }
@@ -347,4 +315,37 @@ fun handleResendVerification(
     showLoadingDialog.value = true
     loginVM.resendVerificationEmail(context, email.value)
     showLoadingDialog.value = false
+}
+
+suspend fun navigateBasedOnSetupStatus(loginVM: LoginVM, context: Context, session: UserSession) {
+    val name = session.user?.identities?.get(0)?.identityData?.get("full_name")?.toString()
+    val displayName = if (!name.isNullOrBlank()) name else session.user?.email
+    Toast.makeText(context, "Welcome, $displayName!", Toast.LENGTH_LONG).show()
+    val setupStatus = loginVM.getCurrentUserSetupStatus()
+    when {
+        !setupStatus.recurringBills -> {
+            val intent = Intent(context, RecurringBillsActivity::class.java)
+            context.startActivity(intent)
+            if (context is ComponentActivity) context.finish()
+        }
+        !setupStatus.accountBalance -> {
+            val intent = Intent(context, AccountBalanceActivity::class.java)
+            context.startActivity(intent)
+            if (context is ComponentActivity) context.finish()
+        }
+        !setupStatus.notifSettings -> {
+            val intent = Intent(context, NotificationSettingsActivity::class.java)
+            context.startActivity(intent)
+            if (context is ComponentActivity) context.finish()
+        }
+        else -> {
+            if (setupStatus.errorMessage == null) {
+                Toast.makeText(context, "Welcome, $displayName!", Toast.LENGTH_LONG).show()
+            } else {
+                val intent = Intent(context, MainDrawerActivity::class.java)
+                context.startActivity(intent)
+                if (context is ComponentActivity) context.finish()
+            }
+        }
+    }
 }

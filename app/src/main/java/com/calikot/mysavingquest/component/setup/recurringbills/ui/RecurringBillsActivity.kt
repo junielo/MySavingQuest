@@ -29,14 +29,24 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.calikot.mysavingquest.R
-import com.calikot.mysavingquest.component.setup.recurringbills.domain.models.BillItem
+import com.calikot.mysavingquest.component.setup.recurringbills.domain.models.RecurringBillItem
 import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import com.calikot.mysavingquest.component.setup.accountbalance.ui.AccountBalanceActivity
+import com.calikot.mysavingquest.ui.shared.ConfirmationDialog
+import com.calikot.mysavingquest.ui.shared.LoadingDialog
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.calikot.mysavingquest.component.setup.recurringbills.domain.RecurringBillsVM
+import com.calikot.mysavingquest.util.formatRecurringDay
+import com.calikot.mysavingquest.util.formatWithCommas
+import dagger.hilt.android.AndroidEntryPoint
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class RecurringBillsActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,21 +87,9 @@ class RecurringBillsActivity : ComponentActivity() {
 
 @Composable
 fun RecurringBillsScreen(modifier: Modifier = Modifier) {
-    var showAddDialog by remember { mutableStateOf(false) }
-    val defaultBills = listOf(
-        BillItem("House Rent", "Every 5th day of the month", 10000, false),
-        BillItem("Loklok", "Every 21st day of the month", 209, true),
-        BillItem("Youtube Premium", "Every 1st day of the month", 589, true),
-        BillItem("Github Copilot", "Every 28th day of the month", 580, true),
-        BillItem("Netflix", "Every 10th day of the month", 150, true),
-        BillItem("Spotify", "Every 15th day of the month", 99, true),
-        BillItem("Apple Music", "Every 12th day of the month", 129, true),
-        BillItem("Internet", "Every 2nd day of the month", 499, false),
-        BillItem("Electricity", "Every 7th day of the month", 1200, false),
-        BillItem("Water", "Every 8th day of the month", 300, false)
-    )
-    val bills = remember { mutableStateListOf<BillItem>().apply { addAll(defaultBills) } }
-
+    var showAddBillDialog by remember { mutableStateOf(false) }
+    val viewModel: RecurringBillsVM = hiltViewModel()
+    val bills by viewModel.recurringBills.collectAsState()
     val listState = rememberLazyListState()
     val fabOffsetX = remember { Animatable(0f) }
     val fabHiddenOffset = 300f // px to move FAB out of screen
@@ -110,11 +108,13 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        val isLoading by viewModel.isLoading.collectAsState()
+        LoadingDialog(show = isLoading)
         Column(modifier = Modifier.fillMaxSize()) {
             RecurringBillsList(bills = bills, listState = listState)
         }
         FloatingActionButton(
-            onClick = { showAddDialog = true },
+            onClick = { showAddBillDialog = true },
             shape = CircleShape,
             containerColor = Color(0xFF2C2C2C),
             contentColor = Color.White,
@@ -126,12 +126,14 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
         ) {
             Text("+", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
         }
-        if (showAddDialog) {
+        if (showAddBillDialog) {
             AddBillDialog(
-                onDismiss = { showAddDialog = false },
+                onDismiss = { showAddBillDialog = false },
                 onCreate = { bill ->
-                    bills.add(bill)
-                    showAddDialog = false
+                    showAddBillDialog = false
+                    viewModel.showLoading()
+                    viewModel.addRecurringBill(bill)
+                    viewModel.dismissLoading()
                 }
             )
         }
@@ -141,21 +143,25 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
 @Composable
 fun RecurringBillsTopBar() {
     val context = LocalContext.current
+    val viewModel: RecurringBillsVM = hiltViewModel()
+    val coroutineScope = rememberCoroutineScope()
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(end = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Replace with your own icon resource if available
         Text(
             text = "Recurring Bills",
             modifier = Modifier.weight(1f)
         )
         Button(
             onClick = {
-                val intent = Intent(context, AccountBalanceActivity::class.java)
-                context.startActivity(intent)
+                coroutineScope.launch {
+                    viewModel.updateRecurringBillStatus()
+                    val intent = Intent(context, AccountBalanceActivity::class.java)
+                    context.startActivity(intent)
+                }
             },
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2C)),
@@ -168,9 +174,10 @@ fun RecurringBillsTopBar() {
 }
 
 @Composable
-fun RecurringBillsList(bills: MutableList<BillItem>, listState: LazyListState) {
+fun RecurringBillsList(bills: List<RecurringBillItem>, listState: LazyListState) {
     var showDialog by remember { mutableStateOf(false) }
-    var billToDelete by remember { mutableStateOf<BillItem?>(null) }
+    var billToDelete by remember { mutableStateOf<RecurringBillItem?>(null) }
+    val viewModel: RecurringBillsVM = hiltViewModel()
 
     LazyColumn(state = listState, modifier = Modifier.fillMaxWidth()) {
         itemsIndexed(bills, key = { _, bill -> bill.hashCode() }) { i, bill ->
@@ -236,36 +243,24 @@ fun RecurringBillsList(bills: MutableList<BillItem>, listState: LazyListState) {
         }
     }
     if (showDialog && billToDelete != null) {
-        AlertDialog(
-            onDismissRequest = {
+        ConfirmationDialog(
+            title = "Delete Bill",
+            message = "Are you sure you want to delete this bill?",
+            onConfirm = {
+                billToDelete?.let { viewModel.removeRecurringBill(it) }
                 showDialog = false
                 billToDelete = null
             },
-            title = { Text("Delete Bill") },
-            text = { Text("Are you sure you want to delete this bill?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    bills.remove(billToDelete)
-                    showDialog = false
-                    billToDelete = null
-                }) {
-                    Text("Yes")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showDialog = false
-                    billToDelete = null
-                }) {
-                    Text("No")
-                }
+            onDismiss = {
+                showDialog = false
+                billToDelete = null
             }
         )
     }
 }
 
 @Composable
-fun RecurringBillRow(bill: BillItem) {
+fun RecurringBillRow(bill: RecurringBillItem) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -281,7 +276,7 @@ fun RecurringBillRow(bill: BillItem) {
                 color = Color.Black
             )
             Text(
-                text = bill.date,
+                text = formatRecurringDay(bill.date),
                 fontSize = 13.sp, // smaller than before
                 color = Color(0xFF757575)
             )
@@ -304,7 +299,7 @@ fun RecurringBillRow(bill: BillItem) {
             Spacer(modifier = Modifier.width(8.dp))
         }
         Text(
-            text = bill.amount.toString(),
+            text = formatWithCommas(bill.amount),
             fontSize = 20.sp,
             fontWeight = FontWeight.Medium,
             color = Color.Black,

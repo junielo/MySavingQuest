@@ -67,4 +67,22 @@ class UserHandlerService @Inject constructor(
             Result.failure(e)
         }
     }
+
+    suspend fun updateUserSetupStatus(field: String, value: Boolean): Result<Any?> {
+        return try {
+            val userId = userAuthState.getUserLoggedIn()?.user?.id
+            val result = supabase.from("user_setup_status").update(
+                mapOf(
+                    field to value
+                )
+            ) {
+                filter {
+                    userId?.let { eq("user_id", it) }
+                }
+            }
+            Result.success(result.data)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

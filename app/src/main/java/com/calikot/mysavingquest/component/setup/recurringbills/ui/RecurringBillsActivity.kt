@@ -2,6 +2,7 @@ package com.calikot.mysavingquest.component.setup.recurringbills.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
@@ -96,6 +97,8 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
     val fabVisibleOffset = 0f
     val isScrolling by remember { derivedStateOf { listState.isScrollInProgress } }
 
+    AccountBalanceSetupStatus(list = bills, viewModel = viewModel)
+
     LaunchedEffect(isScrolling) {
         fabOffsetX.animateTo(
             if (isScrolling) fabHiddenOffset else fabVisibleOffset,
@@ -158,9 +161,13 @@ fun RecurringBillsTopBar() {
         Button(
             onClick = {
                 coroutineScope.launch {
-                    viewModel.updateRecurringBillStatus()
-                    val intent = Intent(context, AccountBalanceActivity::class.java)
-                    context.startActivity(intent)
+                    if (viewModel.recurringBills.value.isNotEmpty()) {
+                        viewModel.updateRecurringBillStatus(true)
+                        val intent = Intent(context, AccountBalanceActivity::class.java)
+                        context.startActivity(intent)
+                    } else {
+                        Toast.makeText(context, "Please add at least one recurring bill", Toast.LENGTH_SHORT).show()
+                    }
                 }
             },
             shape = RoundedCornerShape(12.dp),
@@ -305,5 +312,14 @@ fun RecurringBillRow(bill: RecurringBillItem) {
             color = Color.Black,
             textAlign = TextAlign.End
         )
+    }
+}
+
+@Composable
+fun AccountBalanceSetupStatus(list: List<RecurringBillItem>, viewModel: RecurringBillsVM){
+    LaunchedEffect(list.size) {
+        if (list.isEmpty()) {
+            viewModel.updateRecurringBillStatus(false)
+        }
     }
 }

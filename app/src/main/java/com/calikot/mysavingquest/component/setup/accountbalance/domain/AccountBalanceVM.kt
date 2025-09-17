@@ -1,2 +1,73 @@
 package com.calikot.mysavingquest.component.setup.accountbalance.domain
 
+import androidx.lifecycle.ViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import com.calikot.mysavingquest.di.service.AccountBalanceService
+import com.calikot.mysavingquest.component.setup.accountbalance.domain.models.AccountBalanceItem
+import com.calikot.mysavingquest.di.service.UserHandlerService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+
+@HiltViewModel
+class AccountBalanceVM @Inject constructor(
+    private val accountBalanceService: AccountBalanceService,
+    private val userHandlerService: UserHandlerService
+) : ViewModel() {
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _accountBalances = MutableStateFlow<List<AccountBalanceItem>>(emptyList())
+    val accountBalances: StateFlow<List<AccountBalanceItem>> = _accountBalances
+
+    fun showLoading() {
+        _isLoading.value = true
+    }
+
+    fun dismissLoading() {
+        _isLoading.value = false
+    }
+
+    init {
+        getAllAccountBalances()
+    }
+
+    fun addAccountBalance(item: AccountBalanceItem) {
+        _isLoading.value = true
+        CoroutineScope(Dispatchers.IO).launch {
+            accountBalanceService.insertAccountBalance(item)
+            getAllAccountBalances()
+            _isLoading.value = false
+        }
+    }
+
+    fun getAllAccountBalances() {
+        CoroutineScope(Dispatchers.IO).launch {
+            val result = accountBalanceService.getAllAccountBalances()
+            if (result.isSuccess) {
+                _accountBalances.value = result.getOrNull() ?: emptyList()
+            }
+        }
+    }
+
+    fun removeAccountBalance(item: AccountBalanceItem) {
+        _isLoading.value = true
+        CoroutineScope(Dispatchers.IO).launch {
+            accountBalanceService.deleteAccountBalance(item)
+            getAllAccountBalances()
+            _isLoading.value = false
+        }
+    }
+
+    fun updateAccountBalanceStatus(value: Boolean) {
+        _isLoading.value = true
+        CoroutineScope(Dispatchers.IO).launch {
+            userHandlerService.updateUserSetupStatus("account_balance", value)
+            _isLoading.value = false
+        }
+    }
+
+}

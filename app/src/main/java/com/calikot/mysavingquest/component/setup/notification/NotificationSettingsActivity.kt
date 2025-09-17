@@ -1,6 +1,7 @@
 package com.calikot.mysavingquest.component.setup.notification
 
 import android.app.TimePickerDialog
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -29,6 +30,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.painterResource
 import com.calikot.mysavingquest.R
+import com.calikot.mysavingquest.component.setup.accountbalance.ui.AccountBalanceActivity
 import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
 import java.util.*
 
@@ -84,7 +86,11 @@ fun NotificationSettingsScreen(modifier: Modifier = Modifier) {
             NotificationSettingsBody(modifier)
         }
         FloatingActionButton(
-            onClick = { (context as? ComponentActivity)?.finish() },
+            onClick = {
+                val intent = Intent(context, AccountBalanceActivity::class.java)
+                context.startActivity(intent)
+                (context as? ComponentActivity)?.finish()
+            },
             shape = CircleShape,
             containerColor = Color(0xFF2C2C2C),
             contentColor = Color.White,

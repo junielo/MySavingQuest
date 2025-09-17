@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 @HiltViewModel
 class RecurringBillsVM @Inject constructor(
     private val recurringBillsService: RecurringBillsService,
-    private val userAuthState: UserHandlerService
+    private val userHandlerService: UserHandlerService
 ) : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -62,10 +62,10 @@ class RecurringBillsVM @Inject constructor(
         }
     }
 
-    fun updateRecurringBillStatus() {
+    fun updateRecurringBillStatus(value: Boolean) {
         _isLoading.value = true
         CoroutineScope(Dispatchers.IO).launch {
-            userAuthState.updateUserSetupStatus("recurring_bills", true)
+            userHandlerService.updateUserSetupStatus("recurring_bills", value)
             _isLoading.value = false
         }
     }

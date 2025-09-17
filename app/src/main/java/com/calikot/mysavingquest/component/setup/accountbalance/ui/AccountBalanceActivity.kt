@@ -2,6 +2,7 @@ package com.calikot.mysavingquest.component.setup.accountbalance.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
@@ -36,9 +37,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.calikot.mysavingquest.R
 import com.calikot.mysavingquest.component.setup.notification.NotificationSettingsActivity
-import com.calikot.mysavingquest.component.setup.accountbalance.domain.models.AccountItem
+import com.calikot.mysavingquest.component.setup.accountbalance.domain.models.AccountBalanceItem
 import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.calikot.mysavingquest.component.setup.accountbalance.domain.AccountBalanceVM
+import com.calikot.mysavingquest.component.setup.recurringbills.ui.RecurringBillsActivity
+import com.calikot.mysavingquest.ui.shared.LoadingDialog
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class AccountBalanceActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,19 +89,18 @@ class AccountBalanceActivity : ComponentActivity() {
 fun AccountBalanceScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     var showAddDialog by remember { mutableStateOf(false) }
-    val defaultAccounts = listOf(
-        AccountItem("BDO Debit", "Debit"),
-        AccountItem("BDO Credit", "Credit"),
-        AccountItem("GCash Credit", "Credit")
-    )
-    val accounts = remember { mutableStateListOf<AccountItem>().apply { addAll(defaultAccounts) } }
+    val viewModel: AccountBalanceVM = hiltViewModel()
+    val accountBalances by viewModel.accountBalances.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     val listState = rememberLazyListState()
     val fabRightOffset = remember { Animatable(0f) }
     val fabLeftOffset = remember { Animatable(0f) }
     val fabHiddenOffset = 300f
     val fabVisibleOffset = 0f
-    val isScrolling by remember { derivedStateOf<Boolean> { listState.isScrollInProgress } }
+    val isScrolling by remember { derivedStateOf { listState.isScrollInProgress } }
+
+    AccountBalanceSetupStatus(list = accountBalances, viewModel = viewModel)
 
     LaunchedEffect(isScrolling) {
         fabRightOffset.animateTo(
@@ -111,8 +118,9 @@ fun AccountBalanceScreen(modifier: Modifier = Modifier) {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        LoadingDialog(show = isLoading)
         Column(modifier = Modifier.fillMaxSize()) {
-            AccountBalanceList(accounts = accounts, listState = listState)
+            AccountBalanceList(accounts = accountBalances, listState = listState, viewModel = viewModel)
         }
         FloatingActionButton(
             onClick = { showAddDialog = true },
@@ -128,7 +136,11 @@ fun AccountBalanceScreen(modifier: Modifier = Modifier) {
             Icon(Icons.Filled.Add, contentDescription = "Add", modifier = Modifier.size(32.dp))
         }
         FloatingActionButton(
-            onClick = { (context as? ComponentActivity)?.finish() },
+            onClick = {
+                val intent = Intent(context, RecurringBillsActivity::class.java)
+                context.startActivity(intent)
+                (context as? ComponentActivity)?.finish()
+            },
             shape = CircleShape,
             containerColor = Color(0xFF2C2C2C),
             contentColor = Color.White,
@@ -145,8 +157,10 @@ fun AccountBalanceScreen(modifier: Modifier = Modifier) {
                 onDismiss = { showAddDialog = false },
                 onCreate = { type, name ->
                     if (name.isNotBlank()) {
-                        accounts.add(AccountItem(name, type))
                         showAddDialog = false
+                        viewModel.showLoading()
+                        viewModel.addAccountBalance(AccountBalanceItem(accType = type, accName = name))
+                        viewModel.dismissLoading()
                     }
                 }
             )
@@ -157,6 +171,8 @@ fun AccountBalanceScreen(modifier: Modifier = Modifier) {
 @Composable
 fun AccountBalanceTopBar() {
     val context = LocalContext.current
+    val viewModel: AccountBalanceVM = hiltViewModel()
+    val coroutineScope = rememberCoroutineScope()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -169,8 +185,15 @@ fun AccountBalanceTopBar() {
         )
         Button(
             onClick = {
-                val intent = Intent(context, NotificationSettingsActivity::class.java)
-                context.startActivity(intent)
+                coroutineScope.launch {
+                    if (viewModel.accountBalances.value.isNotEmpty()) {
+                        viewModel.updateAccountBalanceStatus(true)
+                        val intent = Intent(context, NotificationSettingsActivity::class.java)
+                        context.startActivity(intent)
+                    } else {
+                        Toast.makeText(context, "Please add at least one account", Toast.LENGTH_SHORT).show()
+                    }
+                }
             },
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2C)),
@@ -183,13 +206,13 @@ fun AccountBalanceTopBar() {
 }
 
 @Composable
-fun AccountBalanceList(accounts: MutableList<AccountItem>, listState: LazyListState) {
+fun AccountBalanceList(accounts: List<AccountBalanceItem>, listState: LazyListState, viewModel: AccountBalanceVM) {
     var showDialog by remember { mutableStateOf(false) }
-    var accountToDelete by remember { mutableStateOf<AccountItem?>(null) }
+    var accountToDelete by remember { mutableStateOf<AccountBalanceItem?>(null) }
 
     LazyColumn(state = listState, modifier = Modifier.fillMaxWidth()) {
         itemsIndexed(accounts, key = { _, account -> account.hashCode() }) { i, account ->
-            var offsetX by remember { mutableStateOf(0f) }
+            var offsetX by remember { mutableFloatStateOf(0f) }
             val animatedOffsetX = remember { Animatable(0f) }
             val threshold = 200f
             val showDeleteIcon = offsetX < -40f
@@ -211,7 +234,6 @@ fun AccountBalanceList(accounts: MutableList<AccountItem>, listState: LazyListSt
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color.White)
-                    .background(Color.Transparent)
             ) {
                 if (showDeleteIcon) {
                     Box(
@@ -251,36 +273,24 @@ fun AccountBalanceList(accounts: MutableList<AccountItem>, listState: LazyListSt
         }
     }
     if (showDialog && accountToDelete != null) {
-        AlertDialog(
-            onDismissRequest = {
+        com.calikot.mysavingquest.ui.shared.ConfirmationDialog(
+            title = "Delete Account",
+            message = "Are you sure you want to delete this account?",
+            onConfirm = {
+                accountToDelete?.let { viewModel.removeAccountBalance(it) }
                 showDialog = false
                 accountToDelete = null
             },
-            title = { Text("Delete Account") },
-            text = { Text("Are you sure you want to delete this account?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    accounts.remove(accountToDelete)
-                    showDialog = false
-                    accountToDelete = null
-                }) {
-                    Text("Yes")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showDialog = false
-                    accountToDelete = null
-                }) {
-                    Text("No")
-                }
+            onDismiss = {
+                showDialog = false
+                accountToDelete = null
             }
         )
     }
 }
 
 @Composable
-fun AccountBalanceRow(account: AccountItem) {
+fun AccountBalanceRow(account: AccountBalanceItem) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -289,18 +299,27 @@ fun AccountBalanceRow(account: AccountItem) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = account.name,
+            text = account.accName,
             fontSize = 18.sp,
             fontWeight = FontWeight.Medium,
             color = Color.Black,
             modifier = Modifier.weight(1f)
         )
         Text(
-            text = account.type,
+            text = account.accType,
             fontSize = 18.sp,
             fontWeight = FontWeight.Medium,
             color = Color.Black,
             textAlign = TextAlign.End
         )
+    }
+}
+
+@Composable
+fun AccountBalanceSetupStatus(list: List<AccountBalanceItem>, viewModel: AccountBalanceVM){
+    LaunchedEffect(list.size) {
+        if (list.isEmpty()) {
+            viewModel.updateAccountBalanceStatus(false)
+        }
     }
 }

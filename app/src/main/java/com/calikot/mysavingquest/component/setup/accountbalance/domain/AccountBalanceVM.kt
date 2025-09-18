@@ -23,14 +23,6 @@ class AccountBalanceVM @Inject constructor(
     private val _accountBalances = MutableStateFlow<List<AccountBalanceItem>>(emptyList())
     val accountBalances: StateFlow<List<AccountBalanceItem>> = _accountBalances
 
-    fun showLoading() {
-        _isLoading.value = true
-    }
-
-    fun dismissLoading() {
-        _isLoading.value = false
-    }
-
     init {
         getAllAccountBalances()
     }

@@ -96,7 +96,9 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
     val fabHiddenOffset = 300f // px to move FAB out of screen
     val fabVisibleOffset = 0f
     val isScrolling by remember { derivedStateOf { listState.isScrollInProgress } }
+    val isLoading by viewModel.isLoading.collectAsState()
 
+    LoadingDialog(show = isLoading)
     AccountBalanceSetupStatus(list = bills, viewModel = viewModel)
 
     LaunchedEffect(isScrolling) {
@@ -111,8 +113,6 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        val isLoading by viewModel.isLoading.collectAsState()
-        LoadingDialog(show = isLoading)
         Column(modifier = Modifier.fillMaxSize()) {
             RecurringBillsList(bills = bills, listState = listState)
         }
@@ -134,9 +134,7 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
                 onDismiss = { showAddBillDialog = false },
                 onCreate = { bill ->
                     showAddBillDialog = false
-                    viewModel.showLoading()
                     viewModel.addRecurringBill(bill)
-                    viewModel.dismissLoading()
                 }
             )
         }

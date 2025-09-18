@@ -19,7 +19,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.calikot.mysavingquest.component.setup.recurringbills.domain.models.RecurringBillItem
-import com.calikot.mysavingquest.util.convertMillisToISOString
+import com.calikot.mysavingquest.util.convertDateMillisToISOString
 import com.calikot.mysavingquest.util.longToFormattedDateString
 import com.calikot.mysavingquest.util.validateDataClass
 
@@ -128,7 +128,7 @@ fun AddBillDialog(
                     }
                     Button(
                         onClick = {
-                            val bill = RecurringBillItem(name = name, date = convertMillisToISOString(date), amount = amount.toIntOrNull() ?: 0, isAuto =  autoPay)
+                            val bill = RecurringBillItem(name = name, date = convertDateMillisToISOString(date), amount = amount.toIntOrNull() ?: 0, isAuto =  autoPay)
                             if (validateDataClass(bill, listOf("id"))) {
                                 onCreate(bill)
                             } else {

@@ -57,7 +57,7 @@ class UserHandlerService @Inject constructor(
         return try {
             val userId = userAuthState.getUserLoggedIn()?.user?.id
             val result = supabase.from("user_setup_status")
-                .select(columns = Columns.list("recurring_bills", "account_balance", "account_balance")) {
+                .select(columns = Columns.list("recurring_bills", "account_balance", "notif_settings")) {
                 filter {
                     userId?.let { eq("user_id", it) }
                 }

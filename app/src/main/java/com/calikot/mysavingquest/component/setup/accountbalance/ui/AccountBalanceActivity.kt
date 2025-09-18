@@ -158,9 +158,7 @@ fun AccountBalanceScreen(modifier: Modifier = Modifier) {
                 onCreate = { type, name ->
                     if (name.isNotBlank()) {
                         showAddDialog = false
-                        viewModel.showLoading()
                         viewModel.addAccountBalance(AccountBalanceItem(accType = type, accName = name))
-                        viewModel.dismissLoading()
                     }
                 }
             )

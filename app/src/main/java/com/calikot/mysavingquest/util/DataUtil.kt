@@ -29,11 +29,30 @@ inline fun <reified T : Any> validateDataClass(
     return true
 }
 
-fun convertMillisToISOString(millis: Long): String {
+fun convertDateMillisToISOString(millis: Long): String {
     val date = Date(millis)
     val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
     sdf.timeZone = TimeZone.getTimeZone("UTC")
     return sdf.format(date)
+}
+
+fun convertTimeMillisToISOString(millis: Long): String {
+    val date = Date(millis)
+    val sdf = SimpleDateFormat("HH:mm", Locale.US)
+    sdf.timeZone = TimeZone.getTimeZone("UTC")
+    return sdf.format(date)
+}
+
+fun convert24HourTo12Hour(timeString: String): String {
+    // Expects input in "HH:mm:ss" format
+    return try {
+        val sdf24 = SimpleDateFormat("HH:mm:ss", Locale.US)
+        val date = sdf24.parse(timeString)
+        val sdf12 = SimpleDateFormat("hh:mm a", Locale.US)
+        sdf12.format(date!!)
+    } catch (_: Exception) {
+        "Select time"
+    }
 }
 
 fun formatWithCommas(value: Int): String {

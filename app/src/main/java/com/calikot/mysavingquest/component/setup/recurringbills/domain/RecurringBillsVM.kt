@@ -23,14 +23,6 @@ class RecurringBillsVM @Inject constructor(
     private val _recurringBills = MutableStateFlow<List<RecurringBillItem>>(emptyList())
     val recurringBills: StateFlow<List<RecurringBillItem>> = _recurringBills
 
-    fun showLoading() {
-        _isLoading.value = true
-    }
-
-    fun dismissLoading() {
-        _isLoading.value = false
-    }
-
     init {
         getAllRecurringBills()
     }

@@ -24,10 +24,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -246,14 +248,14 @@ fun CheckAndNavigateIfLoggedIn(context: Context, loginVM: LoginVM) {
 @Composable
 fun LoadingDialog(showDialog: Boolean) {
     if (showDialog) {
-        androidx.compose.material3.AlertDialog(
+        AlertDialog(
             onDismissRequest = {},
             title = { Text("Signing In...") },
             text = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    androidx.compose.material3.CircularProgressIndicator()
+                    CircularProgressIndicator()
                     Spacer(modifier = Modifier.width(16.dp))
                     Text("Please wait while we log you in.")
                 }
@@ -267,7 +269,7 @@ fun LoadingDialog(showDialog: Boolean) {
 @Composable
 fun ErrorDialog(errorMessage: String?, onDismiss: () -> Unit) {
     if (errorMessage != null) {
-        androidx.compose.material3.AlertDialog(
+        AlertDialog(
             onDismissRequest = onDismiss,
             title = { Text("Login Error") },
             text = { Text(errorMessage) },
@@ -322,6 +324,7 @@ suspend fun navigateBasedOnSetupStatus(loginVM: LoginVM, context: Context, sessi
     val displayName = if (!name.isNullOrBlank()) name else session.user?.email
     Toast.makeText(context, "Welcome, $displayName!", Toast.LENGTH_LONG).show()
     val setupStatus = loginVM.getCurrentUserSetupStatus()
+    println("qwerty: $setupStatus.recurringBills - $setupStatus.accountBalance - $setupStatus.notifSettings")
     when {
         !setupStatus.recurringBills -> {
             val intent = Intent(context, RecurringBillsActivity::class.java)
@@ -341,10 +344,11 @@ suspend fun navigateBasedOnSetupStatus(loginVM: LoginVM, context: Context, sessi
         else -> {
             if (setupStatus.errorMessage == null) {
                 Toast.makeText(context, "Welcome, $displayName!", Toast.LENGTH_LONG).show()
-            } else {
                 val intent = Intent(context, MainDrawerActivity::class.java)
                 context.startActivity(intent)
                 if (context is ComponentActivity) context.finish()
+            } else {
+                Toast.makeText(context, setupStatus.errorMessage, Toast.LENGTH_LONG).show()
             }
         }
     }

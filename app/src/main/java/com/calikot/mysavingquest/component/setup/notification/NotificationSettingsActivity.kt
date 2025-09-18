@@ -3,6 +3,7 @@ package com.calikot.mysavingquest.component.setup.notification
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -29,11 +30,21 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.painterResource
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.calikot.mysavingquest.R
 import com.calikot.mysavingquest.component.setup.accountbalance.ui.AccountBalanceActivity
+import com.calikot.mysavingquest.component.setup.notification.domain.NotificationSettingsVM
 import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
+import dagger.hilt.android.AndroidEntryPoint
 import java.util.*
+import androidx.compose.runtime.collectAsState
+import com.calikot.mysavingquest.component.navpages.drawer.MainDrawerActivity
+import com.calikot.mysavingquest.component.setup.notification.domain.models.NotificationSettingsItem
+import com.calikot.mysavingquest.ui.shared.LoadingDialog
+import com.calikot.mysavingquest.util.convert24HourTo12Hour
+import com.calikot.mysavingquest.util.convertTimeMillisToISOString
 
+@AndroidEntryPoint
 class NotificationSettingsActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -107,6 +118,8 @@ fun NotificationSettingsScreen(modifier: Modifier = Modifier) {
 @Composable
 fun NotificationSettingsTopBar() {
     val context = LocalContext.current
+    val viewModel: NotificationSettingsVM = hiltViewModel()
+    val notifSettings by viewModel.notifSettings.collectAsState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -118,7 +131,18 @@ fun NotificationSettingsTopBar() {
             modifier = Modifier.weight(1f)
         )
         Button(
-            onClick = { (context as? ComponentActivity)?.finish() },
+            onClick = {
+                val notifTimeFilled = notifSettings?.notifTime?.isNotEmpty() == true
+                val intervalFilled = notifSettings?.accBalanceInterval?.isNotEmpty() == true
+                if (notifTimeFilled && intervalFilled) {
+                    viewModel.updateNotificationSettingsStatus()
+                    val intent = Intent(context, MainDrawerActivity::class.java)
+                    context.startActivity(intent)
+                    (context as? ComponentActivity)?.finish()
+                } else {
+                    Toast.makeText(context, "Please fill all the forms", Toast.LENGTH_SHORT).show()
+                }
+            },
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2C)),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
@@ -134,11 +158,16 @@ fun NotificationSettingsTopBar() {
 fun NotificationSettingsBody(
     modifier: Modifier = Modifier,
 ) {
-    var interval by remember { mutableStateOf("Select interval") }
-    var time by remember { mutableStateOf("") }
     var showTimePicker by remember { mutableStateOf(false) }
     val intervalOptions = listOf("Daily", "Weekly", "Monthly")
     var expanded by remember { mutableStateOf(false) }
+    val viewModel: NotificationSettingsVM = hiltViewModel()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val notifSettings by viewModel.notifSettings.collectAsState()
+    val interval = notifSettings?.accBalanceInterval ?: "Select interval"
+    val time  = notifSettings?.notifTime ?: ""
+
+    LoadingDialog(show = isLoading)
 
     Column(modifier = modifier) {
         Spacer(modifier = Modifier.height(32.dp))
@@ -169,7 +198,11 @@ fun NotificationSettingsBody(
                     DropdownMenuItem(
                         text = { Text(option) },
                         onClick = {
-                            interval = option
+                            val newNotifSetting = NotificationSettingsItem(
+                                id = notifSettings?.id,
+                                accBalanceInterval = option
+                            )
+                            viewModel.upsertNotificationSettings(newNotifSetting)
                             expanded = false
                         }
                     )
@@ -184,7 +217,7 @@ fun NotificationSettingsBody(
             .padding(horizontal = 24.dp)
         ) {
             OutlinedTextField(
-                value = time.ifEmpty { "Select time" },
+                value = convert24HourTo12Hour(time),
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = {
@@ -207,7 +240,17 @@ fun NotificationSettingsBody(
             DisposableEffect(showTimePicker) {
                 if (showTimePicker) {
                     val dialog = TimePickerDialog(context, { _, hour: Int, minute: Int ->
-                        time = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
+                        val notifTimeMillis = cal.apply {
+                            set(Calendar.HOUR_OF_DAY, hour)
+                            set(Calendar.MINUTE, minute)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }.timeInMillis
+                        val newNotifSetting = NotificationSettingsItem(
+                            id = notifSettings?.id,
+                            notifTime = convertTimeMillisToISOString(notifTimeMillis)
+                        )
+                        viewModel.upsertNotificationSettings(newNotifSetting)
                         showTimePicker = false
                     }, initialHour, initialMinute, true)
                     dialog.setOnDismissListener { showTimePicker = false }

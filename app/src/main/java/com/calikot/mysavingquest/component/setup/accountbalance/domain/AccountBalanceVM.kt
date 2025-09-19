@@ -7,10 +7,13 @@ import com.calikot.mysavingquest.di.service.AccountBalanceService
 import com.calikot.mysavingquest.component.setup.accountbalance.domain.models.AccountBalanceItem
 import com.calikot.mysavingquest.di.service.UserHandlerService
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.runBlocking
 
 @HiltViewModel
 class AccountBalanceVM @Inject constructor(
@@ -27,13 +30,15 @@ class AccountBalanceVM @Inject constructor(
         getAllAccountBalances()
     }
 
-    fun addAccountBalance(item: AccountBalanceItem) {
+    fun addAccountBalance(item: AccountBalanceItem): Result<AccountBalanceItem> {
         _isLoading.value = true
-        CoroutineScope(Dispatchers.IO).launch {
-            accountBalanceService.insertAccountBalance(item)
+        val deferred: Deferred<Result<AccountBalanceItem>> = CoroutineScope(Dispatchers.IO).async {
+            val result = accountBalanceService.insertAccountBalance(item)
             getAllAccountBalances()
             _isLoading.value = false
+            result
         }
+        return runBlocking { deferred.await() }
     }
 
     fun getAllAccountBalances() {
@@ -45,13 +50,17 @@ class AccountBalanceVM @Inject constructor(
         }
     }
 
-    fun removeAccountBalance(item: AccountBalanceItem) {
+    fun removeAccountBalance(item: AccountBalanceItem): Result<Boolean> {
         _isLoading.value = true
-        CoroutineScope(Dispatchers.IO).launch {
-            accountBalanceService.deleteAccountBalance(item)
-            getAllAccountBalances()
+        val deferred: Deferred<Result<Boolean>> = CoroutineScope(Dispatchers.IO).async {
+            val result = accountBalanceService.deleteAccountBalance(item)
+            if (result.isSuccess) {
+                getAllAccountBalances()
+            }
             _isLoading.value = false
+            result
         }
+        return runBlocking { deferred.await() }
     }
 
     fun updateAccountBalanceStatus(value: Boolean) {

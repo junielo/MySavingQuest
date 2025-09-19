@@ -14,3 +14,5 @@ data class AccountBalanceItem(
     @SerialName("acc_type")
     val accType: String // "Debit" or "Credit"
 )
+
+const val ACCOUNT_BALANCE = "account_balance"

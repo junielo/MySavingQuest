@@ -20,3 +20,5 @@ data class RecurringBillItem(
     @SerialName("bill_is_auto")
     val isAuto: Boolean
 )
+
+val RECURRING_BILLS: String = "recurring_bills"

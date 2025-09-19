@@ -97,6 +97,7 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
     val fabVisibleOffset = 0f
     val isScrolling by remember { derivedStateOf { listState.isScrollInProgress } }
     val isLoading by viewModel.isLoading.collectAsState()
+    val context = LocalContext.current
 
     LoadingDialog(show = isLoading)
     AccountBalanceSetupStatus(list = bills, viewModel = viewModel)
@@ -134,7 +135,12 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
                 onDismiss = { showAddBillDialog = false },
                 onCreate = { bill ->
                     showAddBillDialog = false
-                    viewModel.addRecurringBill(bill)
+                    val result = viewModel.addRecurringBill(bill)
+                    if (result.isSuccess) {
+                        Toast.makeText(context, "Recurring bill successfully added.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, result.exceptionOrNull()?.message, Toast.LENGTH_SHORT).show()
+                    }
                 }
             )
         }
@@ -183,6 +189,7 @@ fun RecurringBillsList(bills: List<RecurringBillItem>, listState: LazyListState)
     var showDialog by remember { mutableStateOf(false) }
     var billToDelete by remember { mutableStateOf<RecurringBillItem?>(null) }
     val viewModel: RecurringBillsVM = hiltViewModel()
+    val context = LocalContext.current
 
     LazyColumn(state = listState, modifier = Modifier.fillMaxWidth()) {
         itemsIndexed(bills, key = { _, bill -> bill.hashCode() }) { i, bill ->
@@ -252,7 +259,14 @@ fun RecurringBillsList(bills: List<RecurringBillItem>, listState: LazyListState)
             title = "Delete Bill",
             message = "Are you sure you want to delete this bill?",
             onConfirm = {
-                billToDelete?.let { viewModel.removeRecurringBill(it) }
+                billToDelete?.let {
+                    val result = viewModel.removeRecurringBill(it)
+                    if (result.isSuccess) {
+                        Toast.makeText(context, "Recurring bill successfully deleted.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, result.exceptionOrNull()?.message, Toast.LENGTH_SHORT).show()
+                    }
+                }
                 showDialog = false
                 billToDelete = null
             },

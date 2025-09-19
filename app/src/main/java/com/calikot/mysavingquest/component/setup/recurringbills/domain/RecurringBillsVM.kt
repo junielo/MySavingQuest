@@ -7,10 +7,13 @@ import com.calikot.mysavingquest.di.service.RecurringBillsService
 import com.calikot.mysavingquest.component.setup.recurringbills.domain.models.RecurringBillItem
 import com.calikot.mysavingquest.di.service.UserHandlerService
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.runBlocking
 
 @HiltViewModel
 class RecurringBillsVM @Inject constructor(
@@ -27,31 +30,39 @@ class RecurringBillsVM @Inject constructor(
         getAllRecurringBills()
     }
 
-    fun addRecurringBill(item: RecurringBillItem) {
+    fun addRecurringBill(item: RecurringBillItem): Result<RecurringBillItem> {
         _isLoading.value = true
-        CoroutineScope(Dispatchers.IO).launch {
-            recurringBillsService.insertRecurringBill(item)
-            getAllRecurringBills()
+        val deferred: Deferred<Result<RecurringBillItem>> = CoroutineScope(Dispatchers.IO).async {
+            val response = recurringBillsService.insertRecurringBill(item)
+            if (response.isSuccess) {
+                getAllRecurringBills()
+            }
             _isLoading.value = false
+            response
         }
+        return runBlocking { deferred.await() }
     }
 
     fun getAllRecurringBills() {
         CoroutineScope(Dispatchers.IO).launch {
-            val result = recurringBillsService.getAllRecurringBills()
-            if (result.isSuccess) {
-                _recurringBills.value = result.getOrNull() ?: emptyList()
+            val response = recurringBillsService.getAllRecurringBills()
+            if (response.isSuccess) {
+                _recurringBills.value = response.getOrNull() ?: emptyList()
             }
         }
     }
 
-    fun removeRecurringBill(item: RecurringBillItem) {
+    fun removeRecurringBill(item: RecurringBillItem): Result<Boolean> {
         _isLoading.value = true
-        CoroutineScope(Dispatchers.IO).launch {
-            recurringBillsService.deleteRecurringBill(item)
-            getAllRecurringBills()
+        val deferred: Deferred<Result<Boolean>> = CoroutineScope(Dispatchers.IO).async {
+            val response = recurringBillsService.deleteRecurringBill(item)
+            if (response.isSuccess) {
+                getAllRecurringBills()
+            }
             _isLoading.value = false
+            response
         }
+        return runBlocking { deferred.await() }
     }
 
     fun updateRecurringBillStatus(value: Boolean) {

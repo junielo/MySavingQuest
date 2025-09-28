@@ -22,6 +22,7 @@ fun AddAccountBalanceDialog(
     var selectedType by remember { mutableStateOf("Credit/Debit Balance") }
     var name by remember { mutableStateOf("") }
     val typeOptions = listOf("Credit", "Debit")
+    var expanded by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -57,7 +58,6 @@ fun AddAccountBalanceDialog(
                     expanded = false,
                     onExpandedChange = {}
                 ) {
-                    var expanded by remember { mutableStateOf(false) }
                     OutlinedTextField(
                         value = selectedType,
                         onValueChange = {},

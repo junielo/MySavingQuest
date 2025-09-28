@@ -117,6 +117,7 @@ class SupabaseWrapper @Inject constructor(
         return try {
             val result = supabase.from(tableName)
                 .update(data) {
+                    select()
                     filter {
                         eq("id", id)
                     }

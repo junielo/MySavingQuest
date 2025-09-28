@@ -21,4 +21,4 @@ data class RecurringBillItem(
     val isAuto: Boolean
 )
 
-val RECURRING_BILLS: String = "recurring_bills"
+const val RECURRING_BILLS: String = "recurring_bills"

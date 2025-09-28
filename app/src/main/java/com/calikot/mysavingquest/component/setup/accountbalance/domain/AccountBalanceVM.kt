@@ -63,6 +63,19 @@ class AccountBalanceVM @Inject constructor(
         return runBlocking { deferred.await() }
     }
 
+    fun updateAccountBalance(item: AccountBalanceItem): Result<AccountBalanceItem> {
+        _isLoading.value = true
+        val deferred: Deferred<Result<AccountBalanceItem>> = CoroutineScope(Dispatchers.IO).async {
+            val result = accountBalanceService.updateAccountBalance(item)
+            if (result.isSuccess) {
+                getAllAccountBalances()
+            }
+            _isLoading.value = false
+            result
+        }
+        return runBlocking { deferred.await() }
+    }
+
     fun updateAccountBalanceStatus(value: Boolean) {
         _isLoading.value = true
         CoroutineScope(Dispatchers.IO).launch {

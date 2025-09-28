@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -120,6 +121,12 @@ fun AccountBalanceScreen(modifier: Modifier = Modifier) {
     ) {
         LoadingDialog(show = isLoading)
         Column(modifier = Modifier.fillMaxSize()) {
+            Text(
+                text = "Swipe left to delete",
+                fontSize = 11.sp,
+                color = Color.Gray,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 2.dp)
+            )
             AccountBalanceList(accounts = accountBalances, listState = listState, viewModel = viewModel)
         }
         FloatingActionButton(
@@ -207,6 +214,9 @@ fun AccountBalanceTopBar() {
 fun AccountBalanceList(accounts: List<AccountBalanceItem>, listState: LazyListState, viewModel: AccountBalanceVM) {
     var showDialog by remember { mutableStateOf(false) }
     var accountToDelete by remember { mutableStateOf<AccountBalanceItem?>(null) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var accountToEdit by remember { mutableStateOf<AccountBalanceItem?>(null) }
+    val context = LocalContext.current
 
     LazyColumn(state = listState, modifier = Modifier.fillMaxWidth()) {
         itemsIndexed(accounts, key = { _, account -> account.hashCode() }) { i, account ->
@@ -264,7 +274,10 @@ fun AccountBalanceList(accounts: List<AccountBalanceItem>, listState: LazyListSt
                             )
                         }
                 ) {
-                    AccountBalanceRow(account)
+                    AccountBalanceRow(account, onEdit = {
+                        accountToEdit = account
+                        showEditDialog = true
+                    })
                 }
             }
             if (i < accounts.lastIndex) HorizontalDivider(color = Color(0xFFE0E0E0), thickness = 1.dp)
@@ -285,10 +298,29 @@ fun AccountBalanceList(accounts: List<AccountBalanceItem>, listState: LazyListSt
             }
         )
     }
+    if (showEditDialog && accountToEdit != null) {
+        EditAccountBalanceDialog(
+            account = accountToEdit!!,
+            onDismiss = {
+                showEditDialog = false
+                accountToEdit = null
+            },
+            onUpdate = { updatedAccount ->
+                showEditDialog = false
+                accountToEdit = null
+                val result = viewModel.updateAccountBalance(updatedAccount)
+                if (result.isSuccess) {
+                    Toast.makeText(context, "Account updated.", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, result.exceptionOrNull()?.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
 }
 
 @Composable
-fun AccountBalanceRow(account: AccountBalanceItem) {
+fun AccountBalanceRow(account: AccountBalanceItem, onEdit: (() -> Unit)) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -310,6 +342,24 @@ fun AccountBalanceRow(account: AccountBalanceItem) {
             color = Color.Black,
             textAlign = TextAlign.End
         )
+        // Edit button
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primary,
+            shadowElevation = 4.dp,
+            modifier = Modifier.padding(start = 12.dp).size(32.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit account",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
     }
 }
 

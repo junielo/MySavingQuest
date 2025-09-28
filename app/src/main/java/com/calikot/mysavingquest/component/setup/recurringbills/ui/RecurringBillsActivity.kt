@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -115,6 +116,12 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
+            Text(
+                text = "Swipe left to delete",
+                fontSize = 11.sp,
+                color = Color.Gray,
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 2.dp)
+            )
             RecurringBillsList(bills = bills, listState = listState)
         }
         FloatingActionButton(
@@ -188,6 +195,8 @@ fun RecurringBillsTopBar() {
 fun RecurringBillsList(bills: List<RecurringBillItem>, listState: LazyListState) {
     var showDialog by remember { mutableStateOf(false) }
     var billToDelete by remember { mutableStateOf<RecurringBillItem?>(null) }
+    var billToEdit by remember { mutableStateOf<RecurringBillItem?>(null) }
+    var showEditDialog by remember { mutableStateOf(false) }
     val viewModel: RecurringBillsVM = hiltViewModel()
     val context = LocalContext.current
 
@@ -248,7 +257,10 @@ fun RecurringBillsList(bills: List<RecurringBillItem>, listState: LazyListState)
                             )
                         }
                 ) {
-                    RecurringBillRow(bill)
+                    RecurringBillRow(bill, onEdit = {
+                        billToEdit = bill
+                        showEditDialog = true
+                    })
                 }
             }
             if (i < bills.lastIndex) HorizontalDivider(color = Color(0xFFE0E0E0), thickness = 1.dp)
@@ -276,10 +288,30 @@ fun RecurringBillsList(bills: List<RecurringBillItem>, listState: LazyListState)
             }
         )
     }
+    // Edit dialog
+    if (showEditDialog && billToEdit != null) {
+        EditBillDialog(
+            bill = billToEdit!!,
+            onDismiss = {
+                showEditDialog = false
+                billToEdit = null
+            },
+            onUpdate = { updatedBill ->
+                showEditDialog = false
+                billToEdit = null
+                val result = viewModel.updateRecurringBill(updatedBill)
+                if (result.isSuccess) {
+                    Toast.makeText(context, "Recurring bill updated.", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, result.exceptionOrNull()?.message, Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
 }
 
 @Composable
-fun RecurringBillRow(bill: RecurringBillItem) {
+fun RecurringBillRow(bill: RecurringBillItem, onEdit: (() -> Unit)) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -290,13 +322,13 @@ fun RecurringBillRow(bill: RecurringBillItem) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = bill.name,
-                fontSize = 18.sp, // smaller than before
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color.Black
             )
             Text(
                 text = formatRecurringDay(bill.date),
-                fontSize = 13.sp, // smaller than before
+                fontSize = 13.sp,
                 color = Color(0xFF757575)
             )
         }
@@ -324,6 +356,24 @@ fun RecurringBillRow(bill: RecurringBillItem) {
             color = Color.Black,
             textAlign = TextAlign.End
         )
+        // Make edit button pop out
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primary,
+            shadowElevation = 4.dp,
+            modifier = Modifier.padding(start = 12.dp).size(32.dp) // Make button smaller
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) { // Smaller IconButton
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit bill",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp) // Smaller icon
+                    )
+                }
+            }
+        }
     }
 }
 

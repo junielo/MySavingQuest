@@ -324,7 +324,6 @@ suspend fun navigateBasedOnSetupStatus(loginVM: LoginVM, context: Context, sessi
     val displayName = if (!name.isNullOrBlank()) name else session.user?.email
     Toast.makeText(context, "Welcome, $displayName!", Toast.LENGTH_LONG).show()
     val setupStatus = loginVM.getCurrentUserSetupStatus()
-    println("qwerty: $setupStatus.recurringBills - $setupStatus.accountBalance - $setupStatus.notifSettings")
     when {
         !setupStatus.recurringBills -> {
             val intent = Intent(context, RecurringBillsActivity::class.java)

@@ -22,5 +22,9 @@ class AccountBalanceService @Inject constructor(
     suspend fun deleteAccountBalance(item: AccountBalanceItem): Result<Boolean> {
         return supabaseWrapper.deleteOwnData(ACCOUNT_BALANCE, item.id)
     }
+
+    suspend fun updateAccountBalance(item: AccountBalanceItem): Result<AccountBalanceItem> {
+        return supabaseWrapper.updateOwnData(ACCOUNT_BALANCE, item.id, item)
+    }
     
 }

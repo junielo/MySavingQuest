@@ -65,6 +65,19 @@ class RecurringBillsVM @Inject constructor(
         return runBlocking { deferred.await() }
     }
 
+    fun updateRecurringBill(item: RecurringBillItem): Result<RecurringBillItem?> {
+        _isLoading.value = true
+        val deferred: Deferred<Result<RecurringBillItem?>> = CoroutineScope(Dispatchers.IO).async {
+            val response = recurringBillsService.updateRecurringBill(item)
+            if (response.isSuccess) {
+                getAllRecurringBills()
+            }
+            _isLoading.value = false
+            response
+        }
+        return runBlocking { deferred.await() }
+    }
+
     fun updateRecurringBillStatus(value: Boolean) {
         _isLoading.value = true
         CoroutineScope(Dispatchers.IO).launch {

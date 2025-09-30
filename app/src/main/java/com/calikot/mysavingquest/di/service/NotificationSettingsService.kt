@@ -1,36 +1,34 @@
 package com.calikot.mysavingquest.di.service
 
+import com.calikot.mysavingquest.component.setup.notification.domain.models.ACC_NOTIF_LIST
+import com.calikot.mysavingquest.component.setup.notification.domain.models.AccountNotificationItem
+import com.calikot.mysavingquest.component.setup.notification.domain.models.BILLS_NOTIFICATION_LIST
+import com.calikot.mysavingquest.component.setup.notification.domain.models.BillsNotificationItem
+import com.calikot.mysavingquest.component.setup.notification.domain.models.NOTIF_SETTINGS
 import com.calikot.mysavingquest.component.setup.notification.domain.models.NotificationSettingsItem
-import com.calikot.mysavingquest.conn.Connections.supabase
-import com.calikot.mysavingquest.di.global.UserAuthState
-import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.query.Columns
+import com.calikot.mysavingquest.di.global.SupabaseWrapper
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class NotificationSettingsService @Inject constructor(
-    private val userAuthState: UserAuthState
+    private val supabaseWrapper: SupabaseWrapper
 ) {
 
-    suspend fun upsertNotificationSettings(notifSettings: NotificationSettingsItem) {
-        supabase.from("notif_settings").upsert(notifSettings)
+    suspend fun upsertNotificationSettings(notifSettings: NotificationSettingsItem): Result<NotificationSettingsItem> {
+        return supabaseWrapper.upsertOwnData(NOTIF_SETTINGS, notifSettings)
     }
 
-    suspend fun getNotificationSettings(): Result<NotificationSettingsItem?> {
-        return try {
-            val userId = userAuthState.getUserLoggedIn()?.user?.id
-            val result = supabase.from("notif_settings")
-                .select(columns = Columns.ALL) {
-                    filter {
-                        userId?.let { eq("user_id", it) }
-                    }
-                }
-                .decodeSingle<NotificationSettingsItem>()
-            Result.success(result)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+    suspend fun getNotificationSettings(): Result<NotificationSettingsItem> {
+        return supabaseWrapper.getOwnSingleData(NOTIF_SETTINGS)
+    }
+
+    suspend fun bulkCreateBillNotifications(billsNotificationList: List<BillsNotificationItem>): Result<List<BillsNotificationItem>> {
+        return supabaseWrapper.addBulkOwnData(BILLS_NOTIFICATION_LIST, billsNotificationList)
+    }
+
+    suspend fun bulkCreateAccBalanceNotification(accBalanceNotificationList: List<AccountNotificationItem>): Result<List<AccountNotificationItem>> {
+        return supabaseWrapper.addBulkOwnData(ACC_NOTIF_LIST, accBalanceNotificationList)
     }
 
 }

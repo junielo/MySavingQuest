@@ -14,3 +14,5 @@ data class NotificationSettingsItem(
     @SerialName("acc_balance_interval")
     val accBalanceInterval: String? = null,
 )
+
+const val NOTIF_SETTINGS = "notif_settings"

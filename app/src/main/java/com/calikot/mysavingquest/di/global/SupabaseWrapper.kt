@@ -13,9 +13,10 @@ class SupabaseWrapper @Inject constructor(
     val userAuthState: UserAuthState
 ) {
     /**
-     * Fetches data owned by the currently logged-in user from the specified table.
+     * Retrieves a list of items from the specified table that are owned by the currently logged-in user.
+     *
      * @param tableName The name of the table to query.
-     * @return Result with a non-null list of items or an error.
+     * @return [Result] containing a non-empty list of items of type [T] if successful, or an error if the user is not logged in or no data is found.
      */
     suspend inline fun <reified T : Any> getOwnListData(
         tableName: String
@@ -40,9 +41,16 @@ class SupabaseWrapper @Inject constructor(
         }
     }
 
+    /**
+     * Retrieves a single item from the specified table that is owned by the currently logged-in user, optionally filtered by ID.
+     *
+     * @param tableName The name of the table to query.
+     * @param id Optional ID of the item to retrieve. If null, only user_id is used for filtering.
+     * @return [Result] containing the item of type [T] if found, or an error if not found or the user is not logged in.
+     */
     suspend inline fun <reified T : Any> getOwnSingleData(
         tableName: String,
-        id: String
+        id: String? = null
     ): Result<T> {
         val userId = userAuthState.getUserLoggedIn()?.user?.id
         if (userId == null) {
@@ -53,7 +61,7 @@ class SupabaseWrapper @Inject constructor(
                 .select(columns = io.github.jan.supabase.postgrest.query.Columns.ALL) {
                     filter {
                         eq("user_id", userId)
-                        eq("id", id)
+                        if (id != null) { eq("id", id) }
                     }
                 }
                 .decodeSingleOrNull<T>()
@@ -68,10 +76,11 @@ class SupabaseWrapper @Inject constructor(
     }
 
     /**
-     * Inserts a new item owned by the currently logged-in user into the specified table.
+     * Inserts a new item into the specified table for the currently logged-in user.
+     *
      * @param tableName The name of the table to insert into.
-     * @param data The data to insert. Must include user_id field.
-     * @return Result with the inserted item or an error.
+     * @param data The data to insert. Must include a user_id field matching the logged-in user.
+     * @return [Result] containing the inserted item of type [T] if successful, or an error if the user is not logged in or the insert fails.
      */
     suspend inline fun <reified T : Any> addOwnData(
         tableName: String,
@@ -95,12 +104,35 @@ class SupabaseWrapper @Inject constructor(
         }
     }
 
+    suspend inline fun <reified T : Any> addBulkOwnData(
+        tableName: String,
+        data: List<T>
+    ): Result<List<T>> {
+        val userId = userAuthState.getUserLoggedIn()?.user?.id
+        if (userId == null) {
+            return Result.failure(IllegalStateException("User not logged in."))
+        }
+        return try {
+            val result = supabase.from(tableName)
+                .insert(data)
+                .decodeList<T>()
+            if (result.isEmpty()) {
+                return Result.failure(Exception("Insert failed"))
+            } else {
+                Result.success(result)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     /**
-     * Updates an item owned by the currently logged-in user in the specified table.
+     * Updates an existing item in the specified table that is owned by the currently logged-in user.
+     *
      * @param tableName The name of the table to update.
-     * @param id The id of the item to update.
+     * @param id The ID of the item to update. Must not be null.
      * @param data The new data for the item.
-     * @return Result with the updated item or an error.
+     * @return [Result] containing the updated item of type [T] if successful, or an error if the user is not logged in, the ID is null, or the update fails.
      */
     suspend inline fun <reified T : Any> updateOwnData(
         tableName: String,
@@ -134,10 +166,40 @@ class SupabaseWrapper @Inject constructor(
     }
 
     /**
-     * Deletes an item owned by the currently logged-in user from the specified table.
+     * Inserts or updates an item in the specified table for the currently logged-in user (upsert operation).
+     *
+     * @param tableName The name of the table to upsert into.
+     * @param data The data to upsert. Must include a user_id field matching the logged-in user.
+     * @return [Result] containing the upserted item of type [T] if successful, or an error if the user is not logged in or the upsert fails.
+     */
+    suspend inline fun <reified T : Any> upsertOwnData(
+        tableName: String,
+        data: T
+    ): Result<T> {
+        val userId = userAuthState.getUserLoggedIn()?.user?.id
+        if (userId == null) {
+            return Result.failure(IllegalStateException("User not logged in."))
+        }
+        return try {
+            val result = supabase.from(tableName)
+                .upsert(data)
+                .decodeSingleOrNull<T>()
+            if (result == null) {
+                return Result.failure(Exception("Upsert failed"))
+            } else {
+                Result.success(result)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Deletes an item from the specified table that is owned by the currently logged-in user.
+     *
      * @param tableName The name of the table to delete from.
-     * @param id The id of the item to delete.
-     * @return Result with true if deleted, or an error.
+     * @param id The ID of the item to delete. Must not be null.
+     * @return [Result] containing true if the item was deleted, or an error if the user is not logged in, the ID is null, or the delete fails.
      */
     suspend fun deleteOwnData(
         tableName: String,

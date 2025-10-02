@@ -23,11 +23,11 @@ class NotificationSettingsService @Inject constructor(
         return supabaseWrapper.getOwnSingleData(NOTIF_SETTINGS)
     }
 
-    suspend fun bulkCreateBillNotifications(billsNotificationList: List<BillsNotificationItem>): Result<List<BillsNotificationItem>> {
+    suspend fun bulkCreateBillNotifications(billsNotificationList: List<BillsNotificationItem>): Result<Boolean> {
         return supabaseWrapper.addBulkOwnData(BILLS_NOTIFICATION_LIST, billsNotificationList)
     }
 
-    suspend fun bulkCreateAccBalanceNotification(accBalanceNotificationList: List<AccountNotificationItem>): Result<List<AccountNotificationItem>> {
+    suspend fun bulkCreateAccBalanceNotification(accBalanceNotificationList: List<AccountNotificationItem>): Result<Boolean> {
         return supabaseWrapper.addBulkOwnData(ACC_NOTIF_LIST, accBalanceNotificationList)
     }
 

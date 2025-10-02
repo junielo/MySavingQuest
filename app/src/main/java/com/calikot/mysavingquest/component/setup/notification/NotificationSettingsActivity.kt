@@ -2,10 +2,12 @@ package com.calikot.mysavingquest.component.setup.notification
 
 import android.app.TimePickerDialog
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -40,12 +42,14 @@ import java.util.*
 import androidx.compose.runtime.collectAsState
 import com.calikot.mysavingquest.component.navpages.drawer.MainDrawerActivity
 import com.calikot.mysavingquest.component.setup.notification.domain.models.NotificationSettingsItem
+import com.calikot.mysavingquest.component.setup.notification.domain.models.INTERVAL_OPTIONS
 import com.calikot.mysavingquest.ui.shared.LoadingDialog
 import com.calikot.mysavingquest.util.convert24HourTo12Hour
 import com.calikot.mysavingquest.util.convertTimeMillisToISOString
 
 @AndroidEntryPoint
 class NotificationSettingsActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -115,11 +119,13 @@ fun NotificationSettingsScreen(modifier: Modifier = Modifier) {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun NotificationSettingsTopBar() {
     val context = LocalContext.current
     val viewModel: NotificationSettingsVM = hiltViewModel()
     val notifSettings by viewModel.notifSettings.collectAsState()
+    var isButtonEnabled by remember { mutableStateOf(true) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -135,14 +141,25 @@ fun NotificationSettingsTopBar() {
                 val notifTimeFilled = notifSettings?.notifTime?.isNotEmpty() == true
                 val intervalFilled = notifSettings?.accBalanceInterval?.isNotEmpty() == true
                 if (notifTimeFilled && intervalFilled) {
-                    viewModel.updateNotificationSettingsStatus()
-                    val intent = Intent(context, MainDrawerActivity::class.java)
-                    context.startActivity(intent)
-                    (context as? ComponentActivity)?.finish()
+                    if (isButtonEnabled) {
+                        isButtonEnabled = false
+                        viewModel.initiateInitialNotificationSetup() { success ->
+                            if (success) {
+                                viewModel.updateNotificationSettingsStatus()
+                                val intent = Intent(context, MainDrawerActivity::class.java)
+                                context.startActivity(intent)
+                                (context as? ComponentActivity)?.finish()
+                            } else {
+                                Toast.makeText(context, "Failed to set up notifications. Please try again.", Toast.LENGTH_SHORT).show()
+                            }
+                            isButtonEnabled = true
+                        }
+                    }
                 } else {
                     Toast.makeText(context, "Please fill all the forms", Toast.LENGTH_SHORT).show()
                 }
             },
+            enabled = isButtonEnabled,
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2C)),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
@@ -159,7 +176,7 @@ fun NotificationSettingsBody(
     modifier: Modifier = Modifier,
 ) {
     var showTimePicker by remember { mutableStateOf(false) }
-    val intervalOptions = listOf("Daily", "Weekly", "Monthly")
+
     var expanded by remember { mutableStateOf(false) }
     val viewModel: NotificationSettingsVM = hiltViewModel()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -194,7 +211,7 @@ fun NotificationSettingsBody(
                 onDismissRequest = { expanded = false },
                 modifier = Modifier.exposedDropdownSize()
             ) {
-                intervalOptions.forEach { option ->
+                INTERVAL_OPTIONS.forEach { option ->
                     DropdownMenuItem(
                         text = { Text(option) },
                         onClick = {

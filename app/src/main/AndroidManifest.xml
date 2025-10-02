@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:name=".MySavingQuestApplication"
@@ -49,6 +51,9 @@
             android:name=".component.navpages.drawer.MainDrawerActivity"
             android:exported="true"
             android:label="Main Drawer" />
+        <receiver
+            android:name=".util.ScheduledNotificationReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

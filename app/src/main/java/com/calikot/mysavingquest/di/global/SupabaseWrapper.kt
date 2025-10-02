@@ -107,21 +107,17 @@ class SupabaseWrapper @Inject constructor(
     suspend inline fun <reified T : Any> addBulkOwnData(
         tableName: String,
         data: List<T>
-    ): Result<List<T>> {
+    ): Result<Boolean> {
         val userId = userAuthState.getUserLoggedIn()?.user?.id
         if (userId == null) {
             return Result.failure(IllegalStateException("User not logged in."))
         }
         return try {
-            val result = supabase.from(tableName)
+            supabase.from(tableName)
                 .insert(data)
-                .decodeList<T>()
-            if (result.isEmpty()) {
-                return Result.failure(Exception("Insert failed"))
-            } else {
-                Result.success(result)
-            }
+            Result.success(true)
         } catch (e: Exception) {
+            println("qwerty - Error inserting bulk data: ${e.message}")
             Result.failure(e)
         }
     }

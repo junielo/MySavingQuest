@@ -17,8 +17,11 @@ data class AccountNotificationItem(
     @SerialName("acc_type")
     val accountType: String,
 
-    @SerialName("amount")
-    val amount: Int? = null
+    @SerialName("acc_amount")
+    val amount: Int,
+
+    @SerialName("acc_input_date")
+    val accInputDate: String
 )
 
 const val ACC_NOTIF_LIST: String = "acc_notification_list"

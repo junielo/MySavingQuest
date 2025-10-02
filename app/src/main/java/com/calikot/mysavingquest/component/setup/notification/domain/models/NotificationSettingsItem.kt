@@ -16,3 +16,5 @@ data class NotificationSettingsItem(
 )
 
 const val NOTIF_SETTINGS = "notif_settings"
+
+val INTERVAL_OPTIONS = listOf("Daily", "Weekly", "Monthly")

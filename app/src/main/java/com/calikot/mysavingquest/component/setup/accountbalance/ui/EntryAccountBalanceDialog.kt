@@ -18,14 +18,16 @@ import com.calikot.mysavingquest.component.setup.accountbalance.domain.models.Ac
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditAccountBalanceDialog(
-    account: AccountBalanceItem,
+fun EntryAccountBalanceDialog(
+    account: AccountBalanceItem? = null,
     onDismiss: () -> Unit,
-    onUpdate: (AccountBalanceItem) -> Unit
+    onUpdate: (AccountBalanceItem) -> Unit = {},
+    onCreate: (type: String, name: String) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
-    var accName by remember { mutableStateOf(account.accName) }
-    var accType by remember { mutableStateOf(account.accType) }
+    val isEditMode = account != null
+    var accName by remember { mutableStateOf(account?.accName ?: "") }
+    var accType by remember { mutableStateOf(account?.accType ?: "Credit") }
     val typeOptions = listOf("Credit", "Debit")
     var expanded by remember { mutableStateOf(false) }
 
@@ -37,7 +39,12 @@ fun EditAccountBalanceDialog(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Edit Account", fontWeight = FontWeight.Bold, fontSize = 26.sp, modifier = Modifier.weight(1f))
+                Text(
+                    if (isEditMode) "Edit Account" else "Add Account",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 26.sp,
+                    modifier = Modifier.weight(1f)
+                )
                 IconButton(onClick = onDismiss) {
                     Icon(Icons.Default.Close, contentDescription = "Close")
                 }
@@ -72,7 +79,6 @@ fun EditAccountBalanceDialog(
                                 expanded = expanded
                             )
                         },
-                        // Open dropdown on text field click
                         enabled = true
                     )
                     ExposedDropdownMenu(
@@ -104,19 +110,23 @@ fun EditAccountBalanceDialog(
                     Button(
                         onClick = {
                             if (accName.isNotBlank()) {
-                                val updatedAccount = AccountBalanceItem(
-                                    id = account.id,
-                                    accName = accName,
-                                    accType = accType
-                                )
-                                onUpdate(updatedAccount)
+                                if (isEditMode) {
+                                    val updatedAccount = AccountBalanceItem(
+                                        id = account.id,
+                                        accName = accName,
+                                        accType = accType
+                                    )
+                                    onUpdate(updatedAccount)
+                                } else {
+                                    onCreate(accType, accName)
+                                }
                             } else {
                                 Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2C), contentColor = Color.White)
                     ) {
-                        Text("Update")
+                        Text(if (isEditMode) "Update" else "Create")
                     }
                 }
             }

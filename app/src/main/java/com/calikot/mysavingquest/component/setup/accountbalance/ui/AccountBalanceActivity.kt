@@ -160,7 +160,7 @@ fun AccountBalanceScreen(modifier: Modifier = Modifier) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(32.dp))
         }
         if (showAddDialog) {
-            AddAccountBalanceDialog(
+            EntryAccountBalanceDialog(
                 onDismiss = { showAddDialog = false },
                 onCreate = { type, name ->
                     if (name.isNotBlank()) {
@@ -313,7 +313,7 @@ fun AccountBalanceList(accounts: List<AccountBalanceItem>, listState: LazyListSt
         )
     }
     if (showEditDialog && accountToEdit != null) {
-        EditAccountBalanceDialog(
+        EntryAccountBalanceDialog(
             account = accountToEdit!!,
             onDismiss = {
                 showEditDialog = false

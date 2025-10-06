@@ -138,7 +138,7 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
             Text("+", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
         }
         if (showAddBillDialog) {
-            AddBillDialog(
+            EntryBillDialog(
                 onDismiss = { showAddBillDialog = false },
                 onCreate = { bill ->
                     showAddBillDialog = false
@@ -304,7 +304,7 @@ fun RecurringBillsList(bills: List<RecurringBillItem>, listState: LazyListState)
     // Edit dialog
     if (showEditDialog && billToEdit != null) {
         val coroutineScope = rememberCoroutineScope()
-        EditBillDialog(
+        EntryBillDialog(
             bill = billToEdit!!,
             onDismiss = {
                 showEditDialog = false

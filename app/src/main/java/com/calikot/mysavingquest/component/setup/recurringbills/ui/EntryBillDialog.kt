@@ -20,22 +20,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.calikot.mysavingquest.component.setup.recurringbills.domain.models.RecurringBillItem
 import com.calikot.mysavingquest.util.convertDateMillisToISOString
+import com.calikot.mysavingquest.util.isoStringToTimestamp
 import com.calikot.mysavingquest.util.longToFormattedDateString
 import com.calikot.mysavingquest.util.validateDataClass
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddBillDialog(
+fun EntryBillDialog(
+    bill: RecurringBillItem? = null,
     onDismiss: () -> Unit,
-    onCreate: (RecurringBillItem) -> Unit
+    onUpdate: (RecurringBillItem) -> Unit = {},
+    onCreate: (RecurringBillItem) -> Unit = {}
 ) {
     val context = LocalContext.current
-    var date by remember { mutableStateOf(0L) }
-    var name by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
-    var autoPay by remember { mutableStateOf(false) }
+    val isEditMode = bill != null
+    println("qwerty - date: ${bill?.date}")
+    var date by remember { mutableLongStateOf(isoStringToTimestamp(bill?.date ?: "")) }
+    var name by remember { mutableStateOf(bill?.name ?: "") }
+    var amount by remember { mutableStateOf(bill?.amount?.toString() ?: "") }
+    var autoPay by remember { mutableStateOf(bill?.isAuto ?: false) }
     var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState()
+    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = if (date > 0L) date else null)
 
     if (showDatePicker) {
         DatePickerDialog(
@@ -58,13 +63,18 @@ fun AddBillDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = {}, // We'll use custom buttons below
+        confirmButton = {},
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Recurring Bills", fontWeight = FontWeight.Bold, fontSize = 26.sp, modifier = Modifier.weight(1f))
+                Text(
+                    if (isEditMode) "Edit Recurring Bill" else "Recurring Bills",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 26.sp,
+                    modifier = Modifier.weight(1f)
+                )
                 IconButton(onClick = onDismiss) {
                     Icon(Icons.Filled.Close, contentDescription = "Close")
                 }
@@ -77,8 +87,7 @@ fun AddBillDialog(
                     value = longToFormattedDateString(date),
                     onValueChange = {},
                     placeholder = { Text("Select date") },
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     readOnly = true,
                     trailingIcon = {
@@ -100,7 +109,7 @@ fun AddBillDialog(
                 Text("Amount", fontWeight = FontWeight.Medium, fontSize = 16.sp)
                 OutlinedTextField(
                     value = amount,
-                    onValueChange = { amount = it.filter { it.isDigit() } },
+                    onValueChange = { mAmount -> amount = mAmount.filter { it.isDigit() } },
                     placeholder = { Text("Expense amount") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -128,16 +137,31 @@ fun AddBillDialog(
                     }
                     Button(
                         onClick = {
-                            val bill = RecurringBillItem(name = name, date = convertDateMillisToISOString(date), amount = amount.toIntOrNull() ?: 0, isAuto =  autoPay)
-                            if (validateDataClass(bill, listOf("id"))) {
-                                onCreate(bill)
+                            val billItem = if (isEditMode) {
+                                RecurringBillItem(
+                                    id = bill.id,
+                                    name = name,
+                                    date = convertDateMillisToISOString(date),
+                                    amount = amount.toIntOrNull() ?: bill.amount,
+                                    isAuto = autoPay
+                                )
+                            } else {
+                                RecurringBillItem(
+                                    name = name,
+                                    date = convertDateMillisToISOString(date),
+                                    amount = amount.toIntOrNull() ?: 0,
+                                    isAuto = autoPay
+                                )
+                            }
+                            if (validateDataClass(billItem, listOf("id"))) {
+                                if (isEditMode) onUpdate(billItem) else onCreate(billItem)
                             } else {
                                 Toast.makeText(context, "Please fill all fields", Toast.LENGTH_SHORT).show()
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2C), contentColor = Color.White)
                     ) {
-                        Text("Create")
+                        Text(if (isEditMode) "Update" else "Create")
                     }
                 }
             }

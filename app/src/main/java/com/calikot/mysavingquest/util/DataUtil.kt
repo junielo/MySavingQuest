@@ -79,3 +79,14 @@ fun getOrdinal(day: Int): String {
         else -> "${day}th"
     }
 }
+
+fun isoStringToTimestamp(isoString: String): Long {
+    return try {
+        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
+        sdf.timeZone = TimeZone.getTimeZone("UTC")
+        val date = sdf.parse(isoString)
+        date?.time ?: 0L
+    } catch (_: Exception) {
+        0L
+    }
+}

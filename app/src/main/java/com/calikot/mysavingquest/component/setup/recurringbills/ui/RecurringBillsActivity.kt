@@ -142,11 +142,20 @@ fun RecurringBillsScreen(modifier: Modifier = Modifier) {
                 onDismiss = { showAddBillDialog = false },
                 onCreate = { bill ->
                     showAddBillDialog = false
-                    val result = viewModel.addRecurringBill(bill)
-                    if (result.isSuccess) {
-                        Toast.makeText(context, "Recurring bill successfully added.", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, result.exceptionOrNull()?.message, Toast.LENGTH_SHORT).show()
+                    viewModel.addRecurringBill(bill) { result ->
+                        if (result.isSuccess) {
+                            Toast.makeText(
+                                context,
+                                "Recurring bill successfully added.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            Toast.makeText(
+                                context,
+                                result.exceptionOrNull()?.message,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 }
             )
@@ -267,16 +276,20 @@ fun RecurringBillsList(bills: List<RecurringBillItem>, listState: LazyListState)
         }
     }
     if (showDialog && billToDelete != null) {
+        val coroutineScope = rememberCoroutineScope()
         ConfirmationDialog(
             title = "Delete Bill",
             message = "Are you sure you want to delete this bill?",
             onConfirm = {
                 billToDelete?.let {
-                    val result = viewModel.removeRecurringBill(it)
-                    if (result.isSuccess) {
-                        Toast.makeText(context, "Recurring bill successfully deleted.", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, result.exceptionOrNull()?.message, Toast.LENGTH_SHORT).show()
+                    coroutineScope.launch {
+                        viewModel.removeRecurringBill(it) { result ->
+                            if (result.isSuccess) {
+                                Toast.makeText(context, "Recurring bill successfully deleted.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, result.exceptionOrNull()?.message, Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 }
                 showDialog = false
@@ -290,6 +303,7 @@ fun RecurringBillsList(bills: List<RecurringBillItem>, listState: LazyListState)
     }
     // Edit dialog
     if (showEditDialog && billToEdit != null) {
+        val coroutineScope = rememberCoroutineScope()
         EditBillDialog(
             bill = billToEdit!!,
             onDismiss = {
@@ -299,11 +313,14 @@ fun RecurringBillsList(bills: List<RecurringBillItem>, listState: LazyListState)
             onUpdate = { updatedBill ->
                 showEditDialog = false
                 billToEdit = null
-                val result = viewModel.updateRecurringBill(updatedBill)
-                if (result.isSuccess) {
-                    Toast.makeText(context, "Recurring bill updated.", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, result.exceptionOrNull()?.message, Toast.LENGTH_SHORT).show()
+                coroutineScope.launch {
+                    viewModel.updateRecurringBill(updatedBill) { result ->
+                        if (result.isSuccess) {
+                            Toast.makeText(context, "Recurring bill updated.", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, result.exceptionOrNull()?.message, Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
             }
         )

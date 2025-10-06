@@ -23,7 +23,7 @@ class RecurringBillsService @Inject constructor(
         return supabaseWrapper.deleteOwnData(RECURRING_BILLS, item.id)
     }
 
-    suspend fun updateRecurringBill(item: RecurringBillItem): Result<RecurringBillItem?> {
+    suspend fun updateRecurringBill(item: RecurringBillItem): Result<RecurringBillItem> {
         return supabaseWrapper.updateOwnData(RECURRING_BILLS, item.id, item)
     }
 }

@@ -165,7 +165,13 @@ fun AccountBalanceScreen(modifier: Modifier = Modifier) {
                 onCreate = { type, name ->
                     if (name.isNotBlank()) {
                         showAddDialog = false
-                        viewModel.addAccountBalance(AccountBalanceItem(accType = type, accName = name))
+                        viewModel.addAccountBalance(AccountBalanceItem(accType = type, accName = name)) { result ->
+                            if (result.isSuccess) {
+                                Toast.makeText(context, "Account added.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, result.exceptionOrNull()?.message, Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 }
             )
@@ -288,7 +294,15 @@ fun AccountBalanceList(accounts: List<AccountBalanceItem>, listState: LazyListSt
             title = "Delete Account",
             message = "Are you sure you want to delete this account?",
             onConfirm = {
-                accountToDelete?.let { viewModel.removeAccountBalance(it) }
+                accountToDelete?.let {
+                    viewModel.removeAccountBalance(it) { result ->
+                        if (result.isSuccess) {
+                            Toast.makeText(context, "Account deleted.", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, result.exceptionOrNull()?.message, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
                 showDialog = false
                 accountToDelete = null
             },
@@ -308,11 +322,12 @@ fun AccountBalanceList(accounts: List<AccountBalanceItem>, listState: LazyListSt
             onUpdate = { updatedAccount ->
                 showEditDialog = false
                 accountToEdit = null
-                val result = viewModel.updateAccountBalance(updatedAccount)
-                if (result.isSuccess) {
-                    Toast.makeText(context, "Account updated.", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, result.exceptionOrNull()?.message, Toast.LENGTH_SHORT).show()
+                viewModel.updateAccountBalance(updatedAccount) { result ->
+                    if (result.isSuccess) {
+                        Toast.makeText(context, "Account updated.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, result.exceptionOrNull()?.message, Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         )

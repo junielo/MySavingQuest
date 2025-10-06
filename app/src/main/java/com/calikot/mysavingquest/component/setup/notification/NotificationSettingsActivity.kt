@@ -143,12 +143,13 @@ fun NotificationSettingsTopBar() {
                 if (notifTimeFilled && intervalFilled) {
                     if (isButtonEnabled) {
                         isButtonEnabled = false
-                        viewModel.initiateInitialNotificationSetup() { success ->
+                        viewModel.initiateInitialNotificationSetup { success ->
                             if (success) {
                                 viewModel.updateNotificationSettingsStatus()
                                 val intent = Intent(context, MainDrawerActivity::class.java)
                                 context.startActivity(intent)
                                 (context as? ComponentActivity)?.finish()
+                                Toast.makeText(context, "You're all set up.", Toast.LENGTH_SHORT).show()
                             } else {
                                 Toast.makeText(context, "Failed to set up notifications. Please try again.", Toast.LENGTH_SHORT).show()
                             }

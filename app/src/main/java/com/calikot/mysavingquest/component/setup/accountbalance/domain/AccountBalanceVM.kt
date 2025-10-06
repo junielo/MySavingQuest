@@ -1,19 +1,17 @@
 package com.calikot.mysavingquest.component.setup.accountbalance.domain
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import com.calikot.mysavingquest.di.service.AccountBalanceService
 import com.calikot.mysavingquest.component.setup.accountbalance.domain.models.AccountBalanceItem
 import com.calikot.mysavingquest.di.service.UserHandlerService
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 @HiltViewModel
 class AccountBalanceVM @Inject constructor(
@@ -30,55 +28,60 @@ class AccountBalanceVM @Inject constructor(
         getAllAccountBalances()
     }
 
-    fun addAccountBalance(item: AccountBalanceItem): Result<AccountBalanceItem> {
+    fun addAccountBalance(item: AccountBalanceItem, onComplete: (Result<AccountBalanceItem>) -> Unit) {
         _isLoading.value = true
-        val deferred: Deferred<Result<AccountBalanceItem>> = CoroutineScope(Dispatchers.IO).async {
+        viewModelScope.launch(Dispatchers.IO) {
             val result = accountBalanceService.insertAccountBalance(item)
-            getAllAccountBalances()
-            _isLoading.value = false
-            result
+            if (result.isSuccess) getAllAccountBalancesSync()
+            withContext(Dispatchers.Main) {
+                _isLoading.value = false
+                onComplete(result)
+            }
         }
-        return runBlocking { deferred.await() }
     }
 
     fun getAllAccountBalances() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val result = accountBalanceService.getAllAccountBalances()
-            if (result.isSuccess) {
-                _accountBalances.value = result.getOrNull() ?: emptyList()
-            }
+        viewModelScope.launch(Dispatchers.IO) {
+            getAllAccountBalancesSync()
         }
     }
 
-    fun removeAccountBalance(item: AccountBalanceItem): Result<Boolean> {
+    private suspend fun getAllAccountBalancesSync() {
+        val result = accountBalanceService.getAllAccountBalances()
+        if (result.isSuccess) {
+            _accountBalances.value = result.getOrNull() ?: emptyList()
+        }
+    }
+
+    fun removeAccountBalance(item: AccountBalanceItem, onComplete: (Result<Boolean>) -> Unit) {
         _isLoading.value = true
-        val deferred: Deferred<Result<Boolean>> = CoroutineScope(Dispatchers.IO).async {
+        viewModelScope.launch(Dispatchers.IO) {
             val result = accountBalanceService.deleteAccountBalance(item)
-            if (result.isSuccess) {
-                getAllAccountBalances()
+            if (result.isSuccess) getAllAccountBalancesSync()
+            withContext(Dispatchers.Main) {
+                _isLoading.value = false
+                onComplete(result)
             }
-            _isLoading.value = false
-            result
         }
-        return runBlocking { deferred.await() }
     }
 
-    fun updateAccountBalance(item: AccountBalanceItem): Result<AccountBalanceItem> {
+    fun updateAccountBalance(item: AccountBalanceItem, onComplete: (Result<AccountBalanceItem>) -> Unit) {
         _isLoading.value = true
-        val deferred: Deferred<Result<AccountBalanceItem>> = CoroutineScope(Dispatchers.IO).async {
+        viewModelScope.launch(Dispatchers.IO) {
             val result = accountBalanceService.updateAccountBalance(item)
             if (result.isSuccess) {
-                getAllAccountBalances()
+                getAllAccountBalancesSync()
             }
-            _isLoading.value = false
-            result
+            withContext(Dispatchers.Main) {
+                _isLoading.value = false
+                onComplete(result)
+            }
         }
-        return runBlocking { deferred.await() }
     }
 
     fun updateAccountBalanceStatus(value: Boolean) {
         _isLoading.value = true
-        CoroutineScope(Dispatchers.IO).launch {
+        viewModelScope.launch(Dispatchers.IO) {
             userHandlerService.updateUserSetupStatus("account_balance", value)
             _isLoading.value = false
         }

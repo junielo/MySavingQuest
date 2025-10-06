@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -129,20 +130,21 @@ class NotificationSettingsVM @Inject constructor(
                             accountId = acc.id!!,
                             accountName = acc.accName,
                             accountType = acc.accType,
-                            amount = 0,
+                            amount = -1,
                             accInputDate = dateTimeStr
                         )
                     }
 
-                    println("qwerty - Account Balance Notification Items: $accBalanceNotificationItems")
                     val bulkAccBalNotification = notificationSettingsService.bulkCreateAccBalanceNotification(accBalanceNotificationItems)
                     val bulkBillNotification = notificationSettingsService.bulkCreateBillNotifications(billsNotificationItems)
 
                     setupSuccess = bulkBillNotification.isSuccess && bulkAccBalNotification.isSuccess
                 }
             }
-            _isLoading.value = false
-            onComplete(setupSuccess)
+            withContext(Dispatchers.Main) {
+                _isLoading.value = false
+                onComplete(setupSuccess)
+            }
         }
     }
 

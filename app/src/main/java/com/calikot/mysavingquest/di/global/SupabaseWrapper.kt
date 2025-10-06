@@ -92,14 +92,18 @@ class SupabaseWrapper @Inject constructor(
         }
         return try {
             val result = supabase.from(tableName)
-                .insert(data)
+                .insert(data) {
+                    select()
+                }
                 .decodeSingleOrNull<T>()
+            println("qwerty - Inserted data into $tableName: $result")
             if (result == null) {
                 return Result.failure(Exception("Insert failed"))
             } else {
                 Result.success(result)
             }
         } catch (e: Exception) {
+            println("qwerty - Error inserting data: ${e.message}")
             Result.failure(e)
         }
     }

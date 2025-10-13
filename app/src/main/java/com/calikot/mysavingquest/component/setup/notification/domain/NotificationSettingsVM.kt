@@ -84,68 +84,68 @@ class NotificationSettingsVM @Inject constructor(
      * 3. For account balance, set up a daily notification to remind the user to check their balance.
      */
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun initiateInitialNotificationSetup(onComplete: (Boolean) -> Unit) {
-        _isLoading.value = true
-        viewModelScope.launch(Dispatchers.IO) {
-            var setupSuccess = false
-            // Fetch recurring bills and set notifications
-            val recurringBillsResult = recurringBillsService.getAllRecurringBills()
-            val accountBalancesResult = accountBalanceService.getAllAccountBalances()
-            val notifSetting = notificationSettingsService.getNotificationSettings()
-            if (recurringBillsResult.isSuccess && accountBalancesResult.isSuccess && notifSetting.isSuccess) {
-                val recurringBills = recurringBillsResult.getOrNull() ?: emptyList()
-                val accountBalances = accountBalancesResult.getOrNull() ?: emptyList()
-                val notificationSettings = notifSetting.getOrNull()
-                if (recurringBills.isNotEmpty() && accountBalances.isNotEmpty() && notificationSettings != null) {
-                    val time = notificationSettings.notifTime
-                    val interval = notificationSettings.accBalanceInterval
-                    val billsNotificationItems = recurringBills.map { bill ->
-                        // Parse bill.date (assumed format: yyyy-MM-dd)
-                        val billLocalDate = try { LocalDate.parse(bill.date) } catch (_: Exception) { LocalDate.now() }
-                        val billDateTime = LocalDateTime.of(billLocalDate.plusMonths(1),
-                            (LocalTime.parse(time as String) ?: LocalTime.MIDNIGHT)
-                        )
-                        val billDateTimeStr = billDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                        BillsNotificationItem(
-                            billId = bill.id!!,
-                            isRecorded = false,
-                            billIsAuto = bill.isAuto,
-                            amount = bill.amount,
-                            billName = bill.name,
-                            billDate = billDateTimeStr
-                        )
-                    }
-                    val accBalanceNotificationItems = accountBalances.map { acc ->
-                        val baseDate = LocalDate.now()
-                        val nextDate = when (interval) {
-                            "Daily" -> baseDate.plusDays(1)
-                            "Weekly" -> baseDate.plusWeeks(1)
-                            "Monthly" -> baseDate.plusMonths(1)
-                            else -> baseDate
-                        }
-                        val dateTime = LocalDateTime.of(nextDate, LocalTime.parse(time as String))
-                        val dateTimeStr = dateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                        com.calikot.mysavingquest.component.setup.notification.domain.models.AccountNotificationItem(
-                            accountId = acc.id!!,
-                            accountName = acc.accName,
-                            accountType = acc.accType,
-                            amount = -1,
-                            accInputDate = dateTimeStr
-                        )
-                    }
-
-                    val bulkAccBalNotification = notificationSettingsService.bulkCreateAccBalanceNotification(accBalanceNotificationItems)
-                    val bulkBillNotification = notificationSettingsService.bulkCreateBillNotifications(billsNotificationItems)
-
-                    setupSuccess = bulkBillNotification.isSuccess && bulkAccBalNotification.isSuccess
-                }
-            }
-            withContext(Dispatchers.Main) {
-                _isLoading.value = false
-                onComplete(setupSuccess)
-            }
-        }
-    }
+//    @RequiresApi(Build.VERSION_CODES.O)
+//    fun initiateInitialNotificationSetup(onComplete: (Boolean) -> Unit) {
+//        _isLoading.value = true
+//        viewModelScope.launch(Dispatchers.IO) {
+//            var setupSuccess = false
+//            // Fetch recurring bills and set notifications
+//            val recurringBillsResult = recurringBillsService.getAllRecurringBills()
+//            val accountBalancesResult = accountBalanceService.getAllAccountBalances()
+//            val notifSetting = notificationSettingsService.getNotificationSettings()
+//            if (recurringBillsResult.isSuccess && accountBalancesResult.isSuccess && notifSetting.isSuccess) {
+//                val recurringBills = recurringBillsResult.getOrNull() ?: emptyList()
+//                val accountBalances = accountBalancesResult.getOrNull() ?: emptyList()
+//                val notificationSettings = notifSetting.getOrNull()
+//                if (recurringBills.isNotEmpty() && accountBalances.isNotEmpty() && notificationSettings != null) {
+//                    val time = notificationSettings.notifTime
+//                    val interval = notificationSettings.accBalanceInterval
+//                    val billsNotificationItems = recurringBills.map { bill ->
+//                        // Parse bill.date (assumed format: yyyy-MM-dd)
+//                        val billLocalDate = try { LocalDate.parse(bill.date) } catch (_: Exception) { LocalDate.now() }
+//                        val billDateTime = LocalDateTime.of(billLocalDate.plusMonths(1),
+//                            (LocalTime.parse(time as String) ?: LocalTime.MIDNIGHT)
+//                        )
+//                        val billDateTimeStr = billDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+//                        BillsNotificationItem(
+//                            billId = bill.id!!,
+//                            isRecorded = false,
+//                            billIsAuto = bill.isAuto,
+//                            amount = bill.amount,
+//                            billName = bill.name,
+//                            billDate = billDateTimeStr
+//                        )
+//                    }
+//                    val accBalanceNotificationItems = accountBalances.map { acc ->
+//                        val baseDate = LocalDate.now()
+//                        val nextDate = when (interval) {
+//                            "Daily" -> baseDate.plusDays(1)
+//                            "Weekly" -> baseDate.plusWeeks(1)
+//                            "Monthly" -> baseDate.plusMonths(1)
+//                            else -> baseDate
+//                        }
+//                        val dateTime = LocalDateTime.of(nextDate, LocalTime.parse(time as String))
+//                        val dateTimeStr = dateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+//                        com.calikot.mysavingquest.component.setup.notification.domain.models.AccountNotificationItem(
+//                            accountId = acc.id!!,
+//                            accountName = acc.accName,
+//                            accountType = acc.accType,
+//                            amount = -1,
+//                            accInputDate = dateTimeStr
+//                        )
+//                    }
+//
+//                    val bulkAccBalNotification = notificationSettingsService.bulkCreateAccBalanceNotification(accBalanceNotificationItems)
+//                    val bulkBillNotification = notificationSettingsService.bulkCreateBillNotifications(billsNotificationItems)
+//
+//                    setupSuccess = bulkBillNotification.isSuccess && bulkAccBalNotification.isSuccess
+//                }
+//            }
+//            withContext(Dispatchers.Main) {
+//                _isLoading.value = false
+//                onComplete(setupSuccess)
+//            }
+//        }
+//    }
 
 }

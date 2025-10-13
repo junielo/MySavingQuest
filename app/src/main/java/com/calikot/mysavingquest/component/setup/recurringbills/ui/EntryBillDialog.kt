@@ -34,7 +34,6 @@ fun EntryBillDialog(
 ) {
     val context = LocalContext.current
     val isEditMode = bill != null
-    println("qwerty - date: ${bill?.date}")
     var date by remember { mutableLongStateOf(isoStringToTimestamp(bill?.date ?: "")) }
     var name by remember { mutableStateOf(bill?.name ?: "") }
     var amount by remember { mutableStateOf(bill?.amount?.toString() ?: "") }

@@ -96,14 +96,12 @@ class SupabaseWrapper @Inject constructor(
                     select()
                 }
                 .decodeSingleOrNull<T>()
-            println("qwerty - Inserted data into $tableName: $result")
             if (result == null) {
                 return Result.failure(Exception("Insert failed"))
             } else {
                 Result.success(result)
             }
         } catch (e: Exception) {
-            println("qwerty - Error inserting data: ${e.message}")
             Result.failure(e)
         }
     }
@@ -121,7 +119,6 @@ class SupabaseWrapper @Inject constructor(
                 .insert(data)
             Result.success(true)
         } catch (e: Exception) {
-            println("qwerty - Error inserting bulk data: ${e.message}")
             Result.failure(e)
         }
     }

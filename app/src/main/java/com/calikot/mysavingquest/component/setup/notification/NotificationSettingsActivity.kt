@@ -143,18 +143,11 @@ fun NotificationSettingsTopBar() {
                 if (notifTimeFilled && intervalFilled) {
                     if (isButtonEnabled) {
                         isButtonEnabled = false
-                        viewModel.initiateInitialNotificationSetup { success ->
-                            if (success) {
-                                viewModel.updateNotificationSettingsStatus()
-                                val intent = Intent(context, MainDrawerActivity::class.java)
-                                context.startActivity(intent)
-                                (context as? ComponentActivity)?.finish()
-                                Toast.makeText(context, "You're all set up.", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, "Failed to set up notifications. Please try again.", Toast.LENGTH_SHORT).show()
-                            }
-                            isButtonEnabled = true
-                        }
+                        viewModel.updateNotificationSettingsStatus()
+                        val intent = Intent(context, MainDrawerActivity::class.java)
+                        context.startActivity(intent)
+                        (context as? ComponentActivity)?.finish()
+                        Toast.makeText(context, "You're all set up.", Toast.LENGTH_SHORT).show()
                     }
                 } else {
                     Toast.makeText(context, "Please fill all the forms", Toast.LENGTH_SHORT).show()
@@ -178,11 +171,11 @@ fun NotificationSettingsBody(
 ) {
     var showTimePicker by remember { mutableStateOf(false) }
 
-    var expanded by remember { mutableStateOf(false) }
+//    var expanded by remember { mutableStateOf(false) }
     val viewModel: NotificationSettingsVM = hiltViewModel()
     val isLoading by viewModel.isLoading.collectAsState()
     val notifSettings by viewModel.notifSettings.collectAsState()
-    val interval = notifSettings?.accBalanceInterval ?: "Select interval"
+//    val interval = notifSettings?.accBalanceInterval ?: "Select interval"
     val time  = notifSettings?.notifTime ?: ""
 
     LoadingDialog(show = isLoading)
@@ -190,43 +183,43 @@ fun NotificationSettingsBody(
     Column(modifier = modifier) {
         Spacer(modifier = Modifier.height(32.dp))
         // Interval
-        Text("Interval", fontWeight = FontWeight.Medium, fontSize = 18.sp, color = Color.Black, modifier = Modifier.padding(start = 24.dp, bottom = 8.dp))
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = it },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-        ) {
-            OutlinedTextField(
-                value = interval,
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                },
-                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable, true).fillMaxWidth()
-            )
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.exposedDropdownSize()
-            ) {
-                INTERVAL_OPTIONS.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option) },
-                        onClick = {
-                            val newNotifSetting = NotificationSettingsItem(
-                                id = notifSettings?.id,
-                                accBalanceInterval = option
-                            )
-                            viewModel.upsertNotificationSettings(newNotifSetting)
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
+//        Text("Interval", fontWeight = FontWeight.Medium, fontSize = 18.sp, color = Color.Black, modifier = Modifier.padding(start = 24.dp, bottom = 8.dp))
+//        ExposedDropdownMenuBox(
+//            expanded = expanded,
+//            onExpandedChange = { expanded = it },
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(horizontal = 24.dp)
+//        ) {
+//            OutlinedTextField(
+//                value = interval,
+//                onValueChange = {},
+//                readOnly = true,
+//                trailingIcon = {
+//                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+//                },
+//                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable, true).fillMaxWidth()
+//            )
+//            DropdownMenu(
+//                expanded = expanded,
+//                onDismissRequest = { expanded = false },
+//                modifier = Modifier.exposedDropdownSize()
+//            ) {
+//                INTERVAL_OPTIONS.forEach { option ->
+//                    DropdownMenuItem(
+//                        text = { Text(option) },
+//                        onClick = {
+//                            val newNotifSetting = NotificationSettingsItem(
+//                                id = notifSettings?.id,
+//                                accBalanceInterval = option
+//                            )
+//                            viewModel.upsertNotificationSettings(newNotifSetting)
+//                            expanded = false
+//                        }
+//                    )
+//                }
+//            }
+//        }
         Spacer(modifier = Modifier.height(24.dp))
         // Time
         Text("Time", fontWeight = FontWeight.Medium, fontSize = 18.sp, color = Color.Black, modifier = Modifier.padding(start = 24.dp, bottom = 8.dp))
@@ -266,6 +259,7 @@ fun NotificationSettingsBody(
                         }.timeInMillis
                         val newNotifSetting = NotificationSettingsItem(
                             id = notifSettings?.id,
+                            accBalanceInterval = "Daily",
                             notifTime = convertTimeMillisToISOString(notifTimeMillis)
                         )
                         viewModel.upsertNotificationSettings(newNotifSetting)

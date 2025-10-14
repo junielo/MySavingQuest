@@ -19,14 +19,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
-import com.calikot.mysavingquest.component.navpages.dashboard.DashboardScreen
-import com.calikot.mysavingquest.component.navpages.actionneeded.ui.ActionNeededScreen
-import com.calikot.mysavingquest.component.navpages.history.HistoryScreen
-import com.calikot.mysavingquest.component.navpages.settings.SettingsScreen
 import kotlinx.coroutines.launch
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.calikot.mysavingquest.component.navpages.dashboard.DashboardScreen
+import com.calikot.mysavingquest.component.navpages.actionneeded.ui.ActionNeededScreen
+import com.calikot.mysavingquest.component.navpages.history.HistoryScreen
+import com.calikot.mysavingquest.component.navpages.settings.SettingsScreen
 
 class MainDrawerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,16 +49,16 @@ class MainDrawerActivity : ComponentActivity() {
 fun MainDrawerScreen(modifier: Modifier = Modifier) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val items = listOf("Dashboard", "Action Needed", "History", "Settings")
+    val items = listOf("dashboard", "actionneeded", "history", "settings")
+    val itemLabels = listOf("Dashboard", "Action Needed", "History", "Settings")
     val icons = listOf(
         Icons.Filled.Home,      // Dashboard
         Icons.Filled.Warning,   // Action Needed
         Icons.AutoMirrored.Filled.List, // History
         Icons.Filled.Settings   // Settings
     )
-    val routes = NavRoutes.entries
     val navController = rememberNavController()
-    var currentRoute by remember { mutableStateOf(routes[0]) }
+    var currentRoute by remember { mutableStateOf(items[0]) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -67,19 +67,19 @@ fun MainDrawerScreen(modifier: Modifier = Modifier) {
                 modifier = modifier.padding(WindowInsets.safeDrawing.asPaddingValues())
             ) {
                 Spacer(Modifier.height(16.dp))
-                items.forEachIndexed { index, item ->
+                items.forEachIndexed { index, route ->
                     NavigationDrawerItem(
                         icon = {
                             Icon(
                                 imageVector = icons[index],
-                                contentDescription = item
+                                contentDescription = itemLabels[index]
                             )
                         },
-                        label = { Text(item) },
-                        selected = currentRoute == routes[index],
+                        label = { Text(itemLabels[index]) },
+                        selected = currentRoute == route,
                         onClick = {
-                            currentRoute = routes[index]
-                            navController.navigate(routes[index].route) {
+                            currentRoute = route
+                            navController.navigate(route) {
                                 popUpTo(navController.graph.startDestinationId) { saveState = true }
                                 launchSingleTop = true
                                 restoreState = true
@@ -95,7 +95,7 @@ fun MainDrawerScreen(modifier: Modifier = Modifier) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(items[routes.indexOf(currentRoute)]) },
+                    title = { Text(itemLabels[items.indexOf(currentRoute)]) },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = "Menu")
@@ -114,12 +114,12 @@ fun MainDrawerScreen(modifier: Modifier = Modifier) {
             ) {
                 NavHost(
                     navController = navController,
-                    startDestination = NavRoutes.DASHBOARD.route
+                    startDestination = items[0]
                 ) {
-                    composable(NavRoutes.DASHBOARD.route) { DashboardScreen(navController) }
-                    composable(NavRoutes.ACTION_NEEDED.route) { ActionNeededScreen(navController) }
-                    composable(NavRoutes.HISTORY.route) { HistoryScreen(navController) }
-                    composable(NavRoutes.SETTINGS.route) { SettingsScreen(navController) }
+                    composable(items[0]) { DashboardScreen() }
+                    composable(items[1]) { ActionNeededScreen() }
+                    composable(items[2]) { HistoryScreen() }
+                    composable(items[3]) { SettingsScreen() }
                 }
             }
         }

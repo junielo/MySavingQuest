@@ -51,6 +51,22 @@
             android:name=".component.navpages.drawer.MainDrawerActivity"
             android:exported="true"
             android:label="Main Drawer" />
+        <activity
+            android:name=".component.navpages.actionneeded.ui.ActionNeededActivity"
+            android:exported="false"
+            android:label="Action Needed" />
+        <activity
+            android:name=".component.navpages.dashboard.DashboardActivity"
+            android:exported="false"
+            android:label="Dashboard" />
+        <activity
+            android:name=".component.navpages.history.HistoryActivity"
+            android:exported="false"
+            android:label="History" />
+        <activity
+            android:name=".component.navpages.settings.SettingsActivity"
+            android:exported="false"
+            android:label="Settings" />
         <receiver
             android:name=".util.ScheduledNotificationReceiver"
             android:exported="false" />

@@ -1,9 +1,20 @@
 package com.calikot.mysavingquest.di.global
 
 import com.calikot.mysavingquest.conn.Connections.supabase
+import com.calikot.mysavingquest.util.toJsonElement
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.serialization.json.JsonObject
+
+@Serializable
+data class UserIdParam(
+    @SerialName("p_user_id")
+    val userId: String
+)
 
 /**
  * Wrapper for Supabase queries, providing standard error handling and user-based filtering.
@@ -218,6 +229,63 @@ class SupabaseWrapper @Inject constructor(
                     }
                 }
             Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend inline fun <reified T : Any> fetchFunctionWithUserId(
+        functionName: String,
+        params: Map<String, Any?>? = null
+    ): Result<T> {
+        val userId = userAuthState.getUserLoggedIn()?.user?.id
+        if (userId == null) {
+            return Result.failure(IllegalStateException("User not logged in."))
+        }
+        return try {
+            // Merge provided params with the current user's id so the function always receives user_id
+            val mergedParams = (params ?: emptyMap()) + mapOf("user_id" to userId)
+
+            val jsonParams = JsonObject(mergedParams.entries.associate { (k, v) -> k to toJsonElement(v) })
+
+            val result = supabase.postgrest.rpc(functionName, jsonParams)
+                .decodeSingleOrNull<T>()
+
+            if (result == null) {
+                Result.failure(NoSuchElementException("No data returned from '" +
+                        "function."))
+            } else {
+                Result.success(result)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Calls a Postgres RPC that returns a list and includes the current user_id in params.
+     * Default `functionName` is `get_pending_notifications_for_user`.
+     */
+    suspend inline fun <reified T : Any> fetchListFunctionWithUserId(
+        functionName: String,
+        params: Map<String, Any?>? = null
+    ): Result<List<T>> {
+        val userId = userAuthState.getUserLoggedIn()?.user?.id
+        if (userId == null) {
+            return Result.failure(IllegalStateException("User not logged in."))
+        }
+        return try {
+            val mergedParams = (params ?: emptyMap()) + mapOf("p_user_id" to userId)
+            val jsonParams = JsonObject(mergedParams.entries.associate { (k, v) -> k to toJsonElement(v) })
+
+            val result = supabase.postgrest.rpc(functionName, jsonParams)
+                .decodeList<T>()
+
+            if (result.isEmpty()) {
+                Result.failure(NoSuchElementException("No data found for user."))
+            } else {
+                Result.success(result)
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }

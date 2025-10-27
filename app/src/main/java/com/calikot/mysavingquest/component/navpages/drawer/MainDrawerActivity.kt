@@ -1,8 +1,10 @@
 package com.calikot.mysavingquest.component.navpages.drawer
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -27,7 +29,9 @@ import com.calikot.mysavingquest.component.navpages.dashboard.DashboardScreen
 import com.calikot.mysavingquest.component.navpages.actionneeded.ui.ActionNeededScreen
 import com.calikot.mysavingquest.component.navpages.history.HistoryScreen
 import com.calikot.mysavingquest.component.navpages.settings.SettingsScreen
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainDrawerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +48,7 @@ class MainDrawerActivity : ComponentActivity() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainDrawerScreen(modifier: Modifier = Modifier) {

@@ -1,5 +1,10 @@
 package com.calikot.mysavingquest.util
 
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -89,4 +94,16 @@ fun isoStringToTimestamp(isoString: String): Long {
     } catch (_: Exception) {
         0L
     }
+}
+
+// Helper to convert Kotlin values into kotlinx.serialization.json.JsonElement
+fun toJsonElement(value: Any?): JsonElement = when (value) {
+    null -> JsonNull
+    is JsonElement -> value
+    is Boolean -> JsonPrimitive(value)
+    is Number -> JsonPrimitive(value.toString())
+    is String -> JsonPrimitive(value)
+    is Map<*, *> -> JsonObject(value.entries.associate { (k, v) -> k.toString() to toJsonElement(v) })
+    is List<*> -> JsonArray(value.map { toJsonElement(it) })
+    else -> JsonPrimitive(value.toString())
 }

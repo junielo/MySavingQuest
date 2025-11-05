@@ -24,4 +24,4 @@ data class AccountNotificationItem(
     val accInputDate: String
 )
 
-const val ACC_NOTIF_LIST: String = "acc_notification_list"
+const val ACC_NOTIFICATION_LIST: String = "acc_notification_list"

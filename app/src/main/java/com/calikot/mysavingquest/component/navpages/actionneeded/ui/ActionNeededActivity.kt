@@ -2,6 +2,7 @@ package com.calikot.mysavingquest.component.navpages.actionneeded.ui
 
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
@@ -24,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -48,11 +50,14 @@ import com.calikot.mysavingquest.util.longToFormattedDateString
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.calikot.mysavingquest.component.navpages.actionneeded.domain.ActionNeededVM
-import com.calikot.mysavingquest.component.navpages.actionneeded.domain.models.ActionNeededItem2
+import com.calikot.mysavingquest.component.navpages.actionneeded.domain.models.ActionDisplayItem
+import com.calikot.mysavingquest.component.navpages.actionneeded.domain.models.BillsDeleteItem
+import com.calikot.mysavingquest.component.navpages.actionneeded.domain.models.BillsUpdateItem
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -94,10 +99,12 @@ fun ActionNeededScreen() {
             }
         }
 
-        ActionNeededItem2(
+        ActionDisplayItem(
+            id = d.id,
             title = d.notifName,
             subtitle = subtitle,
-            isInputBalance = (d.notifType == "account_balance")
+            isInputBalance = (d.notifType == "ACCOUNT_GROUP"),
+            billIsAuto = d.billIsAuto
         )
     }
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -108,7 +115,10 @@ fun ActionNeededScreen() {
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
                 items(items) { item ->
-                    ActionNeededListItem(item = item)
+                    ActionNeededListItem(
+                        viewModel,
+                        item = item
+                    )
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp),
                         thickness = DividerDefaults.Thickness,
@@ -157,10 +167,16 @@ fun ConfirmationDialog(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun ActionNeededListItem(item: ActionNeededItem2) {
+fun ActionNeededListItem(
+    viewModel: ActionNeededVM,
+    item: ActionDisplayItem
+) {
+    val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showCheckDialog by remember { mutableStateOf(false) }
+    var showInfoDialog by remember { mutableStateOf(false) }
     var showInputDialog by remember { mutableStateOf(false) }
 
     Row(
@@ -186,21 +202,23 @@ fun ActionNeededListItem(item: ActionNeededItem2) {
             )
         }
         Spacer(modifier = Modifier.width(16.dp))
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .background(color = Color(0xFFD32F2F), shape = CircleShape)
-                .clickable { showDeleteDialog = true },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Delete,
-                contentDescription = "Delete",
-                tint = Color.White,
-                modifier = Modifier.size(22.dp)
-            )
+        if (!item.isInputBalance) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(color = Color(0xFFD32F2F), shape = CircleShape)
+                    .clickable { showDeleteDialog = true },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = "Delete",
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
         }
-        Spacer(modifier = Modifier.width(12.dp))
         Box(
             modifier = Modifier
                 .size(36.dp)
@@ -208,6 +226,9 @@ fun ActionNeededListItem(item: ActionNeededItem2) {
                 .clickable {
                     if (item.isInputBalance) {
                         showInputDialog = true
+                    } else if (item.billIsAuto) {
+                        // for automated bills show the info/confirmation dialog
+                        showInfoDialog = true
                     } else {
                         showCheckDialog = true
                     }
@@ -215,8 +236,8 @@ fun ActionNeededListItem(item: ActionNeededItem2) {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = if (item.isInputBalance) Icons.Filled.Settings else Icons.Filled.Check,
-                contentDescription = if (item.isInputBalance) "Settings" else "Check",
+                imageVector = if (item.isInputBalance) Icons.Filled.Settings else if (item.billIsAuto) Icons.Filled.Info else Icons.Filled.Check,
+                contentDescription = if (item.isInputBalance) "Settings" else if (item.billIsAuto) "Info" else "Check",
                 tint = Color.White,
                 modifier = Modifier.size(22.dp)
             )
@@ -227,23 +248,89 @@ fun ActionNeededListItem(item: ActionNeededItem2) {
         showDialog = showDeleteDialog,
         title = "Delete Confirmation",
         message = "Are you sure you want to delete this item?",
-        onConfirm = { showDeleteDialog = false /* handle delete here */ },
-        onDismiss = { showDeleteDialog = false }
+        onDismiss = { showDeleteDialog = false },
+        onConfirm = {
+            showDeleteDialog = false
+            val billDelete = BillsDeleteItem(
+                id = item.id,
+                isRecorded = true,
+                billAmount = 0
+            )
+            viewModel.deleteBillsNotification(billDelete) { success ->
+                showCheckDialog = false
+                if (success) {
+                    Toast.makeText(
+                        context,
+                        "Bill marked as deleted successfully.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    Toast.makeText(
+                        context,
+                        "Something went wrong please try again.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
     )
     ConfirmationDialog(
         showDialog = showCheckDialog,
-        title = "Check Confirmation",
-        message = "Are you sure you want to check this item?",
-        onConfirm = { showCheckDialog = false /* handle check here */ },
-        onDismiss = { showCheckDialog = false }
+        title = "Bill Confirmation",
+        message = "Are you sure you want to confirm this bill?",
+        onDismiss = { showCheckDialog = false },
+        onConfirm = {
+            val billUpdate = BillsUpdateItem(
+                id = item.id,
+                isRecorded = true
+            )
+            viewModel.updateBillsNotification(billUpdate) { success ->
+                showCheckDialog = false
+                if (success) {
+                    Toast.makeText(
+                        context,
+                        "Bill is marked as recorded successfully.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    Toast.makeText(
+                        context,
+                        "Something went wrong please try again.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+    )
+    ConfirmationDialog(
+        showDialog = showInfoDialog,
+        title = "Information",
+        message = "This bill is set to automatic payment. Input your account balances to confirm this payment.",
+        onConfirm = { showInfoDialog = false },
+        onDismiss = { showInfoDialog = false }
     )
     InputBalanceDialog(
+        viewModel = viewModel,
         showDialog = showInputDialog,
         title = item.title,
         onCancel = { showInputDialog = false },
-        onSubmit = { bdoDebit, bdoCredit, gCredit ->
-            showInputDialog = false
-            // handle input values here
+        onSubmit = { it ->
+            if (it) {
+                showInputDialog = false
+                Toast.makeText(
+                    context,
+                    "Account balances updated successfully.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else {
+                Toast.makeText(
+                    context,
+                    "Something went wrong please try again.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+
         }
     )
 }
+

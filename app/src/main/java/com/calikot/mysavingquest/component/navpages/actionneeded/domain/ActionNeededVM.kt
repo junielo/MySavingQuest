@@ -5,6 +5,9 @@ import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.calikot.mysavingquest.component.navpages.actionneeded.domain.models.ActionNeededItem
+import com.calikot.mysavingquest.component.navpages.actionneeded.domain.models.AccUpdateItem
+import com.calikot.mysavingquest.component.navpages.actionneeded.domain.models.BillsDeleteItem
+import com.calikot.mysavingquest.component.navpages.actionneeded.domain.models.BillsUpdateItem
 import com.calikot.mysavingquest.di.service.ActionNeededService
 import com.calikot.mysavingquest.util.isoStringToTimestamp
 import java.time.Instant
@@ -29,8 +32,20 @@ class ActionNeededVM @Inject constructor(
     private val _actionNeededList = MutableStateFlow<List<ActionNeededItem>>(emptyList())
     val actionNeededList: StateFlow<List<ActionNeededItem>> = _actionNeededList
 
+    // Holds the original account-type items so callers can access the full list
+    private val _accountItems = MutableStateFlow<List<ActionNeededItem>>(emptyList())
+    val accountItems: StateFlow<List<ActionNeededItem>> = _accountItems
+
     init {
-        fetchPendingNotifications { /* no-op */ }
+        fetchPendingNotifications()
+    }
+
+    /**
+     * Public helper to update the billAmount for an account item by id.
+     * This is safe to call from the UI thread and updates the backing MutableStateFlow.
+     */
+    fun updateAccountItemAmount(id: Int, newAmount: Int) {
+        _accountItems.value = _accountItems.value.map { if (it.id == id) it.copy(billAmount = newAmount) else it }
     }
 
     /**
@@ -75,7 +90,37 @@ class ActionNeededVM @Inject constructor(
                         ts != null && ts <= endOfDay
                     }
 
-                    Result.success(filtered)
+                    // Partition into account-type items and the rest. Treat common variants (ACCOUNT, account_balance)
+                    val (accountItemsList, otherItems) = filtered.partition { item ->
+                        val nt = item.notifType
+                        nt.equals("ACCOUNT", ignoreCase = true)
+                    }
+
+                    // Save original account items for later use (so UI/actions can access them)
+                    _accountItems.value = accountItemsList
+
+                    // If there are account items, create a grouped synthetic row with notif_name = "Account Balances"
+                    val resultList = if (accountItemsList.isNotEmpty()) {
+                        val totalBill = accountItemsList.sumOf { it.billAmount }
+                        // pick a representative notifTime (earliest) or empty string
+                        val representativeNotifTime = accountItemsList.minByOrNull { it.notifTime.let { s -> parseNotifTimeMillis(s) ?: Long.MAX_VALUE } }?.notifTime ?: ""
+
+                        val grouped = ActionNeededItem(
+                            id = -1,
+                            notifType = "ACCOUNT_GROUP",
+                            notifName = "Account Balances",
+                            billAmount = totalBill,
+                            notifTime = representativeNotifTime,
+                            billIsAuto = false
+                        )
+
+                        // Place the grouped account row first, then the rest (adjust ordering if you prefer)
+                        listOf(grouped) + otherItems
+                    } else {
+                        otherItems
+                    }
+
+                    Result.success(resultList)
                 }, onFailure = { err ->
                     Result.failure(err)
                 })
@@ -92,6 +137,92 @@ class ActionNeededVM @Inject constructor(
                 withContext(Dispatchers.Main) {
                     _isLoading.value = false
                     onComplete(Result.failure(e))
+                }
+            }
+        }
+    }
+
+    /**
+     * Loops through the stored account items, creates an AccUpdateItem for each, calls
+     * ActionNeededService.updateAccNotification, and returns a map of id -> success.
+     * Runs on IO and reports progress with _isLoading; onComplete is invoked on the main thread.
+     */
+    // TODO: Handle if not all updates succeed
+    fun syncAccountNotifications(onComplete: (Map<Int, Boolean>) -> Unit = {}) {
+        _isLoading.value = true
+        viewModelScope.launch(Dispatchers.IO) {
+            val results = mutableMapOf<Int, Boolean>()
+            try {
+                val items = _accountItems.value
+                for (item in items) {
+                    val update = AccUpdateItem(
+                        id = item.id,
+                        accAmount = item.billAmount
+                    )
+                    val success = try {
+                        actionNeededService.updateAccNotification(update)
+                    } catch (_: Exception) {
+                        false
+                    }
+                    results[item.id] = success
+                }
+                fetchPendingNotifications()
+            } finally {
+                withContext(Dispatchers.Main) {
+                    _isLoading.value = false
+                    onComplete(results)
+                }
+            }
+        }
+    }
+
+    /**
+     * Update a single bill notification by id. Runs on IO in viewModelScope, toggles _isLoading,
+     * calls the service and invokes onComplete on the main thread with the success boolean.
+     * On success we remove the updated bill from local lists so UI reflects the change.
+     */
+    fun updateBillsNotification(item: BillsUpdateItem, onComplete: (Boolean) -> Unit = {}) {
+        _isLoading.value = true
+        viewModelScope.launch(Dispatchers.IO) {
+            var success = false
+            try {
+                success = try {
+                    actionNeededService.updateBillsNotification(item)
+                } catch (_: Exception) {
+                    false
+                }
+
+                if (success) {
+                    fetchPendingNotifications()
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
+                    _isLoading.value = false
+                    onComplete(success)
+                }
+            }
+        }
+    }
+
+
+    fun deleteBillsNotification(item: BillsDeleteItem, onComplete: (Boolean) -> Unit = {}) {
+        _isLoading.value = true
+        viewModelScope.launch(Dispatchers.IO) {
+            var success = false
+            try {
+                success = try {
+                    actionNeededService.deleteBillsNotification(item)
+                } catch (_: Exception) {
+                    false
+                }
+
+                if (success) {
+                    fetchPendingNotifications()
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
+                    _isLoading.value = false
+                    onComplete(success)
                 }
             }
         }

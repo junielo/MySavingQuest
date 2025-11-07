@@ -11,9 +11,9 @@ import com.calikot.mysavingquest.component.navpages.actionneeded.domain.models.B
 import com.calikot.mysavingquest.di.service.ActionNeededService
 import com.calikot.mysavingquest.util.isoStringToTimestamp
 import java.time.Instant
+import java.time.YearMonth
+import java.time.ZoneId
 import java.time.format.DateTimeParseException
-import java.util.Calendar
-import java.util.concurrent.TimeUnit
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -60,50 +60,35 @@ class ActionNeededVM @Inject constructor(
                 val rpcResult = actionNeededService.fetchPendingNotifications()
 
                 val finalResult = rpcResult.fold(onSuccess = { list ->
-                    // Compute local start/end of today
-                    val nowCal = Calendar.getInstance()
-                    val startOfDayCal = Calendar.getInstance().apply {
-                        timeInMillis = nowCal.timeInMillis
-                        set(Calendar.HOUR_OF_DAY, 0)
-                        set(Calendar.MINUTE, 0)
-                        set(Calendar.SECOND, 0)
-                        set(Calendar.MILLISECOND, 0)
-                    }
-                    val startOfDay = startOfDayCal.timeInMillis
-                    val endOfDay = startOfDay + TimeUnit.DAYS.toMillis(1) - 1
+                    // Compute start/end of current month in device default zone (inclusive)
+                    val zone = ZoneId.systemDefault()
+                    val ym = YearMonth.now(zone)
+                    val startOfMonth = ym.atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
+                    val startOfNextMonth = ym.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
+                    val endOfMonth = startOfNextMonth - 1L
 
-                    // Helper to parse notifTime string to epoch millis. Try ISO Instant first, then fallback.
-                    fun parseNotifTimeMillis(s: String): Long? {
-                        return try {
-                            Instant.parse(s).toEpochMilli()
-                        } catch (_: DateTimeParseException) {
-                            val fallback = isoStringToTimestamp(s)
-                            // isoStringToTimestamp returns 0 on failure; treat that as parse failure
-                            if (fallback == 0L) null else fallback
-                        }
+                    // Parse notifTime string to epoch millis. Return null on failure.
+                    fun parseNotifTimeMillis(s: String): Long? = try {
+                        Instant.parse(s).toEpochMilli()
+                    } catch (_: DateTimeParseException) {
+                        val fallback = isoStringToTimestamp(s)
+                        if (fallback == 0L) null else fallback
                     }
 
-                    // Keep items whose parsed notifTime is <= end of today (includes past dates).
-                    // Exclude items with unparsable notifTime (parse returns null).
+                    // Filter to items whose notifTime falls within [startOfMonth, endOfMonth]
                     val filtered = list.filter { item ->
                         val ts = parseNotifTimeMillis(item.notifTime)
-                        ts != null && ts <= endOfDay
+                        ts != null && ts in startOfMonth..endOfMonth
                     }
 
-                    // Partition into account-type items and the rest. Treat common variants (ACCOUNT, account_balance)
-                    val (accountItemsList, otherItems) = filtered.partition { item ->
-                        val nt = item.notifType
-                        nt.equals("ACCOUNT", ignoreCase = true)
-                    }
+                    // Partition account items and others
+                    val (accountItemsList, otherItems) = filtered.partition { it.notifType.equals("ACCOUNT", ignoreCase = true) }
 
-                    // Save original account items for later use (so UI/actions can access them)
                     _accountItems.value = accountItemsList
 
-                    // If there are account items, create a grouped synthetic row with notif_name = "Account Balances"
                     val resultList = if (accountItemsList.isNotEmpty()) {
                         val totalBill = accountItemsList.sumOf { it.billAmount }
-                        // pick a representative notifTime (earliest) or empty string
-                        val representativeNotifTime = accountItemsList.minByOrNull { it.notifTime.let { s -> parseNotifTimeMillis(s) ?: Long.MAX_VALUE } }?.notifTime ?: ""
+                        val representativeNotifTime = accountItemsList.minByOrNull { parseNotifTimeMillis(it.notifTime) ?: Long.MAX_VALUE }?.notifTime ?: ""
 
                         val grouped = ActionNeededItem(
                             id = -1,
@@ -114,16 +99,11 @@ class ActionNeededVM @Inject constructor(
                             billIsAuto = false
                         )
 
-                        // Place the grouped account row first, then the rest (adjust ordering if you prefer)
                         listOf(grouped) + otherItems
-                    } else {
-                        otherItems
-                    }
+                    } else otherItems
 
                     Result.success(resultList)
-                }, onFailure = { err ->
-                    Result.failure(err)
-                })
+                }, onFailure = { err -> Result.failure(err) })
 
                 if (finalResult.isSuccess) {
                     _actionNeededList.value = finalResult.getOrNull() ?: emptyList()

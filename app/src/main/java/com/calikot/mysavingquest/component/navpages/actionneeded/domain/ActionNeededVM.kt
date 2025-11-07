@@ -62,33 +62,57 @@ class ActionNeededVM @Inject constructor(
                 val finalResult = rpcResult.fold(onSuccess = { list ->
                     // Compute start/end of current month in device default zone (inclusive)
                     val zone = ZoneId.systemDefault()
-                    val ym = YearMonth.now(zone)
-                    val startOfMonth = ym.atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
-                    val startOfNextMonth = ym.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
-                    val endOfMonth = startOfNextMonth - 1L
+                    val currentYearMonth = YearMonth.now(zone)
+                    val todayDate = java.time.LocalDate.now(zone)
 
-                    // Parse notifTime string to epoch millis. Return null on failure.
-                    fun parseNotifTimeMillis(s: String): Long? = try {
-                        Instant.parse(s).toEpochMilli()
-                    } catch (_: DateTimeParseException) {
+                    // Parse notifTime string to Instant. Fallback handles epoch seconds or millis.
+                    fun parseNotifInstant(s: String): Instant? {
+                        try {
+                            return Instant.parse(s)
+                        } catch (_: DateTimeParseException) {
+                            // fallthrough to fallback
+                        }
+
                         val fallback = isoStringToTimestamp(s)
-                        if (fallback == 0L) null else fallback
+                        if (fallback == 0L) return null
+
+                        // Heuristic: if value looks like millis (> 1e12) treat as millis, otherwise as seconds
+                        val millis = if (fallback > 1_000_000_000_000L) fallback else fallback * 1000L
+                        return Instant.ofEpochMilli(millis)
                     }
 
-                    // Filter to items whose notifTime falls within [startOfMonth, endOfMonth]
-                    val filtered = list.filter { item ->
-                        val ts = parseNotifTimeMillis(item.notifTime)
-                        ts != null && ts in startOfMonth..endOfMonth
+                    // Parse each item once and drop those with unparsable times
+                    val parsedItems = list.mapNotNull { item ->
+                        val inst = parseNotifInstant(item.notifTime)
+                        if (inst == null) null else Triple(item, inst, inst.atZone(zone).toLocalDate())
+                    }
+
+                    // Keep only items in the current month
+                    val inMonth = parsedItems.filter { (_, _, localDate) ->
+                        YearMonth.from(localDate) == currentYearMonth
                     }
 
                     // Partition account items and others
-                    val (accountItemsList, otherItems) = filtered.partition { it.notifType.equals("ACCOUNT", ignoreCase = true) }
+                    val (accountTriples, otherTriples) = inMonth.partition { (item, _, _) ->
+                        item.notifType.equals("ACCOUNT", ignoreCase = true)
+                    }
 
-                    _accountItems.value = accountItemsList
+                    // Save account items (original items)
+                    _accountItems.value = accountTriples.map { it.first }
 
-                    val resultList = if (accountItemsList.isNotEmpty()) {
-                        val totalBill = accountItemsList.sumOf { it.billAmount }
-                        val representativeNotifTime = accountItemsList.minByOrNull { parseNotifTimeMillis(it.notifTime) ?: Long.MAX_VALUE }?.notifTime ?: ""
+                    // Categorize non-account items: if notif date is <= today (not after), mark A_REQ/B_AUTO; else C_NONE
+                    val categorizedOtherItems = otherTriples.map { (item, _, localDate) ->
+                        val newType = if (!localDate.isAfter(todayDate)) {
+                            if (item.billIsAuto) "BILL_B_AUTO" else "BILL_A_REQ"
+                        } else {
+                            "BILL_C_NONE"
+                        }
+                        item.copy(notifType = newType)
+                    }
+
+                    val resultList = if (accountTriples.isNotEmpty()) {
+                        val totalBill = accountTriples.sumOf { it.first.billAmount }
+                        val representativeNotifTime = accountTriples.minByOrNull { it.second.toEpochMilli() }?.first?.notifTime ?: ""
 
                         val grouped = ActionNeededItem(
                             id = -1,
@@ -99,8 +123,8 @@ class ActionNeededVM @Inject constructor(
                             billIsAuto = false
                         )
 
-                        listOf(grouped) + otherItems
-                    } else otherItems
+                        listOf(grouped) + categorizedOtherItems
+                    } else categorizedOtherItems
 
                     Result.success(resultList)
                 }, onFailure = { err -> Result.failure(err) })

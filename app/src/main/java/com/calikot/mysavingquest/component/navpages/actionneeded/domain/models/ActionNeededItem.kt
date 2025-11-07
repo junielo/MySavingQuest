@@ -8,7 +8,8 @@ data class ActionDisplayItem(
     val title: String,
     val subtitle: String,
     val isInputBalance: Boolean = false,
-    val billIsAuto: Boolean
+    val billIsAuto: Boolean,
+    val notifType: String
 )
 
 @Serializable

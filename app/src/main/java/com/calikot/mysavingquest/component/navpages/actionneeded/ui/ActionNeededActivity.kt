@@ -82,7 +82,7 @@ fun ActionNeededScreen() {
     val isLoading by viewModel.isLoading.collectAsState(initial = false)
 
     // Map domain model to UI model with friendly subtitle formatting
-    val items = domainItems.map { d ->
+    val actionNeededList = domainItems.sortedBy { it.notifType }.map { d ->
         val subtitle = run {
             val ts = try { isoStringToTimestamp(d.notifTime) } catch (_: Exception) { 0L }
             if (ts > 0L) {
@@ -104,7 +104,8 @@ fun ActionNeededScreen() {
             title = d.notifName,
             subtitle = subtitle,
             isInputBalance = (d.notifType == "ACCOUNT_GROUP"),
-            billIsAuto = d.billIsAuto
+            billIsAuto = d.billIsAuto,
+            notifType = d.notifType
         )
     }
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -114,7 +115,7 @@ fun ActionNeededScreen() {
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                items(items) { item ->
+                items(actionNeededList) { item ->
                     ActionNeededListItem(
                         viewModel,
                         item = item
@@ -179,6 +180,9 @@ fun ActionNeededListItem(
     var showInfoDialog by remember { mutableStateOf(false) }
     var showInputDialog by remember { mutableStateOf(false) }
 
+    // Hide action buttons and dim text when notifType is BILL_C_NONE
+    val isHidden = item.notifType == "BILL_C_NONE"
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -191,18 +195,19 @@ fun ActionNeededListItem(
             Text(
                 text = item.title,
                 style = MaterialTheme.typography.titleMedium,
-                fontSize = 18.sp
+                fontSize = 18.sp,
+                color = if (isHidden) Color(0xFF757575) else MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = item.subtitle,
                 style = MaterialTheme.typography.bodyMedium,
                 fontSize = 12.sp,
-                color = Color.Gray
+                color = if (isHidden) Color(0xFF9E9E9E) else Color.Gray
             )
         }
         Spacer(modifier = Modifier.width(16.dp))
-        if (!item.isInputBalance) {
+        if (!item.isInputBalance && !isHidden) {
             Box(
                 modifier = Modifier
                     .size(36.dp)
@@ -219,28 +224,30 @@ fun ActionNeededListItem(
             }
             Spacer(modifier = Modifier.width(12.dp))
         }
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .background(color = Color(0xFF43A047), shape = CircleShape)
-                .clickable {
-                    if (item.isInputBalance) {
-                        showInputDialog = true
-                    } else if (item.billIsAuto) {
-                        // for automated bills show the info/confirmation dialog
-                        showInfoDialog = true
-                    } else {
-                        showCheckDialog = true
-                    }
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = if (item.isInputBalance) Icons.Filled.Settings else if (item.billIsAuto) Icons.Filled.Info else Icons.Filled.Check,
-                contentDescription = if (item.isInputBalance) "Settings" else if (item.billIsAuto) "Info" else "Check",
-                tint = Color.White,
-                modifier = Modifier.size(22.dp)
-            )
+        if (!isHidden) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(color = Color(0xFF43A047), shape = CircleShape)
+                    .clickable {
+                        if (item.isInputBalance) {
+                            showInputDialog = true
+                        } else if (item.billIsAuto) {
+                            // for automated bills show the info/confirmation dialog
+                            showInfoDialog = true
+                        } else {
+                            showCheckDialog = true
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (item.isInputBalance) Icons.Filled.Settings else if (item.billIsAuto) Icons.Filled.Info else Icons.Filled.Check,
+                    contentDescription = if (item.isInputBalance) "Settings" else if (item.billIsAuto) "Info" else "Check",
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
     }
 
@@ -333,4 +340,3 @@ fun ActionNeededListItem(
         }
     )
 }
-

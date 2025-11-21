@@ -172,6 +172,9 @@ class ActionNeededVM @Inject constructor(
                 }
                 fetchPendingNotifications()
             } finally {
+                if (results.values.all { it }) {
+                    actionNeededService.updateAutoBillsAndComputeSavings()
+                }
                 withContext(Dispatchers.Main) {
                     _isLoading.value = false
                     onComplete(results)

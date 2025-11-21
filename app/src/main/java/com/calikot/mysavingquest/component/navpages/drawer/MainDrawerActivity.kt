@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.calikot.mysavingquest.component.navpages.dashboard.DashboardScreen
+import com.calikot.mysavingquest.component.navpages.dashboard.ui.DashboardScreen
 import com.calikot.mysavingquest.component.navpages.actionneeded.ui.ActionNeededScreen
 import com.calikot.mysavingquest.component.navpages.history.HistoryScreen
 import com.calikot.mysavingquest.component.navpages.settings.SettingsScreen
@@ -33,6 +33,7 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainDrawerActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {

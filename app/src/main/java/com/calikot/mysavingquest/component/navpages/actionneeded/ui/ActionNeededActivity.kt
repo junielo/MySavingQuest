@@ -264,7 +264,7 @@ fun ActionNeededListItem(
                 billAmount = 0
             )
             viewModel.deleteBillsNotification(billDelete) { success ->
-                showCheckDialog = false
+                showDeleteDialog = false
                 if (success) {
                     Toast.makeText(
                         context,

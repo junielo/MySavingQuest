@@ -34,4 +34,8 @@ class ActionNeededService @Inject constructor(
     suspend fun deleteBillsNotification(item: BillsDeleteItem): Boolean {
         return supabaseWrapper.updateOwnData(BILLS_NOTIFICATION_LIST, item.id, item).isSuccess
     }
+
+    suspend fun updateAutoBillsAndComputeSavings() {
+        supabaseWrapper.callFunctionWithUserId("update_and_record_user_savings")
+    }
 }

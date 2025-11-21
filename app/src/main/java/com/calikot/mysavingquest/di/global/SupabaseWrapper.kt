@@ -4,17 +4,9 @@ import com.calikot.mysavingquest.conn.Connections.supabase
 import com.calikot.mysavingquest.util.toJsonElement
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.serialization.json.JsonObject
-
-@Serializable
-data class UserIdParam(
-    @SerialName("p_user_id")
-    val userId: String
-)
 
 /**
  * Wrapper for Supabase queries, providing standard error handling and user-based filtering.
@@ -155,6 +147,7 @@ class SupabaseWrapper @Inject constructor(
             return Result.failure(IllegalArgumentException("ID cannot be null."))
         }
         return try {
+            println("qwerty - updateOwnData data: $data")
             val result = supabase.from(tableName)
                 .update(data) {
                     select()
@@ -169,6 +162,7 @@ class SupabaseWrapper @Inject constructor(
                 Result.success(result)
             }
         } catch (e: Exception) {
+            println("qwerty - Error message: $e")
             Result.failure(e)
         }
     }
@@ -288,6 +282,28 @@ class SupabaseWrapper @Inject constructor(
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Duplicate of `fetchListFunctionWithUserId` that performs the RPC call but does not return a value.
+     * It still verifies a logged-in user and will throw on errors.
+     */
+    suspend fun callFunctionWithUserId(
+        functionName: String,
+        params: Map<String, Any?>? = null
+    ) {
+        val userId = userAuthState.getUserLoggedIn()?.user?.id
+            ?: throw IllegalStateException("User not logged in.")
+
+        try {
+            val mergedParams = (params ?: emptyMap()) + mapOf("p_user_id" to userId)
+            val jsonParams = JsonObject(mergedParams.entries.associate { (k, v) -> k to toJsonElement(v) })
+
+            // trigger the RPC call and ignore the returned list
+            supabase.postgrest.rpc(functionName, jsonParams)
+        } catch (e: Exception) {
+            throw e
         }
     }
 }

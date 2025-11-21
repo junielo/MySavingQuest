@@ -1,4 +1,4 @@
-package com.calikot.mysavingquest.component.navpages.dashboard
+package com.calikot.mysavingquest.component.navpages.dashboard.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

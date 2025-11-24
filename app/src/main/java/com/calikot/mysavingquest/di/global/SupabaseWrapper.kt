@@ -4,6 +4,8 @@ import com.calikot.mysavingquest.conn.Connections.supabase
 import com.calikot.mysavingquest.util.toJsonElement
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.serialization.json.JsonObject
@@ -30,7 +32,7 @@ class SupabaseWrapper @Inject constructor(
         }
         return try {
             val result = supabase.from(tableName)
-                .select(columns = io.github.jan.supabase.postgrest.query.Columns.ALL) {
+                .select(columns = Columns.ALL) {
                     filter { eq("user_id", userId) }
                 }
                 .decodeList<T>()
@@ -61,12 +63,15 @@ class SupabaseWrapper @Inject constructor(
         }
         return try {
             val result = supabase.from(tableName)
-                .select(columns = io.github.jan.supabase.postgrest.query.Columns.ALL) {
+                .select {
                     filter {
                         eq("user_id", userId)
+
                         if (id != null) { eq("id", id) }
                     }
-                }
+                    order("created_at", order = Order.DESCENDING)
+                    limit(count = 1)
+                  }
                 .decodeSingleOrNull<T>()
             if (result == null) {
                 Result.failure(NoSuchElementException("No data found for user with the given id."))
@@ -74,6 +79,7 @@ class SupabaseWrapper @Inject constructor(
                 Result.success(result)
             }
         } catch (e: Exception) {
+            println("qwerty - getOwnSingleData error: $e")
             Result.failure(e)
         }
     }

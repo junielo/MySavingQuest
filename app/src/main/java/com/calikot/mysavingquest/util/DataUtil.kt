@@ -5,10 +5,18 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import java.math.BigDecimal
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.math.abs
+import kotlin.math.floor
+import kotlin.math.log10
+import kotlin.math.max
+import kotlin.math.pow
+import kotlin.math.round
 import kotlin.reflect.full.memberProperties
 
 fun longToFormattedDateString(value: Long): String {
@@ -106,4 +114,42 @@ fun toJsonElement(value: Any?): JsonElement = when (value) {
     is Map<*, *> -> JsonObject(value.entries.associate { (k, v) -> k.toString() to toJsonElement(v) })
     is List<*> -> JsonArray(value.map { toJsonElement(it) })
     else -> JsonPrimitive(value.toString())
+}
+
+fun formatCompact(value: Float): String {
+    val d = value.toDouble()
+    val absVal = abs(d)
+    val sign = if (d < 0) "-" else ""
+
+    // For small values show full integer with commas
+    if (absVal < 100_000) {
+        val rounded = round(absVal).toLong()
+        val formatted = NumberFormat.getIntegerInstance(Locale.US).format(rounded)
+        return sign + formatted
+    }
+
+    val units = listOf(
+        1_000_000_000_000.0 to "T",
+        1_000_000_000.0 to "B",
+        1_000_000.0 to "M",
+        1_000.0 to "K"
+    )
+
+    for ((div, suffix) in units) {
+        if (absVal >= div) {
+            val scaled = absVal / div
+            val digitsBefore = floor(log10(scaled)).toInt() + 1
+            val desiredSig = if (digitsBefore == 2) 3 else 4
+            val decimals = max(0, desiredSig - digitsBefore)
+
+            val factor = 10.0.pow(decimals)
+            val truncated = (scaled * factor).toLong().toDouble() / factor
+
+            val plain = BigDecimal.valueOf(truncated).stripTrailingZeros().toPlainString()
+            return sign + plain + suffix
+        }
+    }
+
+    // Fallback (shouldn't be reached)
+    return sign + NumberFormat.getIntegerInstance(Locale.US).format(round(absVal).toLong())
 }

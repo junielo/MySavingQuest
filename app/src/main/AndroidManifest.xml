@@ -67,6 +67,19 @@
             android:name=".component.navpages.settings.SettingsActivity"
             android:exported="false"
             android:label="Settings" />
+        <activity
+            android:name=".component.user.login.ui.ResetPasswordActivity"
+            android:exported="true"
+            android:label="Reset Password"
+            android:autoVerify="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="mysavingquest" />
+                <data android:host="resetpassword" />
+            </intent-filter>
+        </activity>
         <receiver
             android:name=".util.ScheduledNotificationReceiver"
             android:exported="false" />

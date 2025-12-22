@@ -40,6 +40,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +49,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
+import androidx.compose.runtime.collectAsState
 import com.calikot.mysavingquest.component.navpages.drawer.MainDrawerActivity
 import com.calikot.mysavingquest.R
 import com.calikot.mysavingquest.component.setup.recurringbills.ui.RecurringBillsActivity
@@ -58,7 +61,6 @@ import com.calikot.mysavingquest.component.user.login.domain.LoginVM
 import com.calikot.mysavingquest.conn.Connections.supabase
 import com.calikot.mysavingquest.util.SupabaseSessionHandler
 import io.github.jan.supabase.auth.handleDeeplinks
-import androidx.lifecycle.lifecycleScope
 import com.calikot.mysavingquest.component.setup.accountbalance.ui.AccountBalanceActivity
 import com.calikot.mysavingquest.component.setup.notification.NotificationSettingsActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -102,9 +104,11 @@ fun LoginScreen(modifier: Modifier = Modifier, loginVM: LoginVM) {
     val context = LocalContext.current
     val email = remember { mutableStateOf("") }
     val password = remember { mutableStateOf("") }
-    val showLoadingDialog = remember { mutableStateOf(false) }
-    val errorDialogMessage = remember { mutableStateOf<String?>(null) }
-    val resendToggle = remember { mutableStateOf(false) }
+    val errorDialogMessage by loginVM.errorMessage.collectAsState()
+    val infoDialogMessage by loginVM.infoMessage.collectAsState()
+    val isLoading by loginVM.isLoading.collectAsState()
+    val resendToggle by loginVM.resendToggle.collectAsState()
+    val resetToggle by loginVM.resetToggle.collectAsState()
 
     CheckAndNavigateIfLoggedIn(context, loginVM)
     SessionSignInListener(loginVM, context)
@@ -166,7 +170,31 @@ fun LoginScreen(modifier: Modifier = Modifier, loginVM: LoginVM) {
 
                     Spacer(modifier = Modifier.height(15.dp))
 
-                    if (!resendToggle.value) {
+                    // Button and password field rendering logic adjusted to include resetToggle
+                    if (resetToggle) {
+                        // Reset Password mode: hide password textbox and show Reset Password button
+                        Button(
+                            onClick = { handleResetPassword(loginVM, email) },
+                            modifier = modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
+                        ) {
+                            Text("Reset Password", color = Color.White)
+                        }
+                    } else if (resendToggle) {
+                        Button(
+                            onClick = { handleResendVerification(loginVM, email) },
+                            modifier = modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
+                        ) {
+                            Text("Send Verification", color = Color.White)
+                        }
+                    } else {
                         OutlinedTextField(
                             value = password.value,
                             onValueChange = { password.value = it },
@@ -179,11 +207,9 @@ fun LoginScreen(modifier: Modifier = Modifier, loginVM: LoginVM) {
                         Button(
                             onClick = {
                                 handleSignIn(
-                                    context,
                                     loginVM,
                                     email,
                                     password,
-                                    showLoadingDialog
                                 )
                             },
                             modifier = modifier
@@ -194,17 +220,6 @@ fun LoginScreen(modifier: Modifier = Modifier, loginVM: LoginVM) {
                         ) {
                             Text("Sign In", color = Color.White)
                         }
-                    } else {
-                        Button(
-                            onClick = { handleResendVerification(context, loginVM, email, showLoadingDialog) },
-                            modifier = modifier
-                                .fillMaxWidth()
-                                .height(50.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
-                        ) {
-                            Text("Send Verification", color = Color.White)
-                        }
                     }
 
                     Row(
@@ -213,8 +228,20 @@ fun LoginScreen(modifier: Modifier = Modifier, loginVM: LoginVM) {
                     ) {
                         Text("Resend Verification Link", modifier = Modifier.weight(1f))
                         Switch(
-                            checked = resendToggle.value,
-                            onCheckedChange = { resendToggle.value = it }
+                            checked = resendToggle,
+                            onCheckedChange = { loginVM.setResendToggle(it) }
+                        )
+                    }
+
+                    // New reset-password switch added just below resend verification link
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Send password reset email", modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = resetToggle,
+                            onCheckedChange = { loginVM.setResetToggle(it) }
                         )
                     }
 
@@ -230,8 +257,10 @@ fun LoginScreen(modifier: Modifier = Modifier, loginVM: LoginVM) {
                 }
             }
         }
-        LoadingDialog(showDialog = showLoadingDialog.value)
-        ErrorDialog(errorDialogMessage.value) { errorDialogMessage.value = null }
+
+        LoadingDialog(showDialog = isLoading)
+        ErrorDialog(errorDialogMessage) { loginVM.clearError() }
+        InfoDialog(infoDialogMessage) { loginVM.clearInfo() }
     }
 }
 
@@ -271,8 +300,25 @@ fun ErrorDialog(errorMessage: String?, onDismiss: () -> Unit) {
     if (errorMessage != null) {
         AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Login Error") },
+            title = { Text("Auth Error") },
             text = { Text(errorMessage) },
+            confirmButton = {
+                Button(onClick = onDismiss) {
+                    Text("OK")
+                }
+            },
+            dismissButton = null
+        )
+    }
+}
+
+@Composable
+fun InfoDialog(infoMessage: String?, onDismiss: () -> Unit) {
+    if (infoMessage != null) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Check your email") },
+            text = { Text(infoMessage) },
             confirmButton = {
                 Button(onClick = onDismiss) {
                     Text("OK")
@@ -298,25 +344,27 @@ fun SessionSignInListener(loginVM: LoginVM, context: Context) {
 }
 
 fun handleSignIn(
-    context: Context,
     loginVM: LoginVM,
     email: MutableState<String>,
     password: MutableState<String>,
-    showLoadingDialog: MutableState<Boolean>,
 ) {
-    showLoadingDialog.value = true
-    loginVM.signIn(context, email.value, password.value)
+    // showLoadingDialog moved to ViewModel
+    loginVM.signIn(email.value, password.value)
 }
 
 fun handleResendVerification(
-    context: Context,
     loginVM: LoginVM,
     email: MutableState<String>,
-    showLoadingDialog: MutableState<Boolean>
 ) {
-    showLoadingDialog.value = true
-    loginVM.resendVerificationEmail(context, email.value)
-    showLoadingDialog.value = false
+    // showLoadingDialog moved to ViewModel
+    loginVM.resendVerificationEmail(email.value)
+}
+
+fun handleResetPassword(
+    loginVM: LoginVM,
+    email: MutableState<String>,
+) {
+    loginVM.sendResetPasswordEmail(email.value)
 }
 
 suspend fun navigateBasedOnSetupStatus(loginVM: LoginVM, context: Context, session: UserSession) {

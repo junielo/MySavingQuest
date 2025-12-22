@@ -6,6 +6,7 @@ import com.calikot.mysavingquest.di.global.UserAuthState
 import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.user.UserSession
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.serialization.json.buildJsonObject
@@ -36,6 +37,48 @@ class UserHandlerService @Inject constructor(
 
     suspend fun resendVerificationEmail(email: String) {
         supabase.auth.resendEmail(OtpType.Email.SIGNUP, email)
+    }
+
+    suspend fun sendResetPasswordEmail(email: String) {
+        supabase.auth.resetPasswordForEmail(email, "mysavingquest://resetpassword")
+    }
+
+    suspend fun verifyRecoveryToken(tokenHash: String): Result<Any?> {
+        return try {
+            // Call verifyEmailOtp; SDK may not return an 'error' property, so treat exceptions as failures
+            supabase.auth.verifyEmailOtp(type = OtpType.Email.RECOVERY, tokenHash = tokenHash)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun setAuthentication(accessToken: String, refreshToken: String, tokenType: String, expiresIn: Long): Result<Any?> {
+        return try {
+            supabase.auth.importSession(
+                UserSession(
+                    accessToken = accessToken,
+                    refreshToken = refreshToken,
+                    expiresIn = expiresIn,
+                    tokenType = tokenType,
+                    user = null
+                )
+            )
+            Result.success(true)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun resetPassword(newPassword: String): Result<Any?> {
+        return try {
+            val result = supabase.auth.updateUser {
+                password = newPassword
+            }
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     suspend fun insertUserSetupStatus(): Result<Any?> {

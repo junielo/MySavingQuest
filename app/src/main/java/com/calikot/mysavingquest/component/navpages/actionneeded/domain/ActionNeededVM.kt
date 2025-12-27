@@ -87,13 +87,13 @@ class ActionNeededVM @Inject constructor(
                         if (inst == null) null else Triple(item, inst, inst.atZone(zone).toLocalDate())
                     }
 
-                    // Keep only items in the current month
-                    val inMonth = parsedItems.filter { (_, _, localDate) ->
-                        YearMonth.from(localDate) == currentYearMonth
-                    }
+//                    // Keep only items in the current month
+//                    val inMonth = parsedItems.filter { (_, _, localDate) ->
+//                        YearMonth.from(localDate) == currentYearMonth
+//                    }
 
                     // Partition account items and others
-                    val (accountTriples, otherTriples) = inMonth.partition { (item, _, _) ->
+                    val (accountTriples, otherTriples) = parsedItems.partition { (item, _, _) ->
                         item.notifType.equals("ACCOUNT", ignoreCase = true)
                     }
 

@@ -26,9 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.painterResource
@@ -42,8 +39,7 @@ import java.util.*
 import androidx.compose.runtime.collectAsState
 import com.calikot.mysavingquest.component.navpages.drawer.MainDrawerActivity
 import com.calikot.mysavingquest.component.setup.notification.domain.models.NotificationSettingsItem
-import com.calikot.mysavingquest.component.setup.notification.domain.models.INTERVAL_OPTIONS
-import com.calikot.mysavingquest.ui.shared.LoadingDialog
+import com.calikot.mysavingquest.ui.shared.dialogs.LoadingDialog
 import com.calikot.mysavingquest.util.convert24HourTo12Hour
 import com.calikot.mysavingquest.util.convertTimeMillisToISOString
 

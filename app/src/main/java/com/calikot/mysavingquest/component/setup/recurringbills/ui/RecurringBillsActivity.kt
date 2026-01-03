@@ -38,8 +38,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import com.calikot.mysavingquest.component.setup.accountbalance.ui.AccountBalanceActivity
-import com.calikot.mysavingquest.ui.shared.ConfirmationDialog
-import com.calikot.mysavingquest.ui.shared.LoadingDialog
+import com.calikot.mysavingquest.ui.shared.dialogs.ConfirmationDialog
+import com.calikot.mysavingquest.ui.shared.dialogs.LoadingDialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.calikot.mysavingquest.component.setup.recurringbills.domain.RecurringBillsVM
 import com.calikot.mysavingquest.util.formatRecurringDay

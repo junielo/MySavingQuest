@@ -1,4 +1,4 @@
-package com.calikot.mysavingquest.ui.shared
+package com.calikot.mysavingquest.ui.shared.dialogs
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box

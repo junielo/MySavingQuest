@@ -43,7 +43,8 @@ import com.calikot.mysavingquest.ui.theme.MySavingQuestTheme
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.calikot.mysavingquest.component.setup.accountbalance.domain.AccountBalanceVM
 import com.calikot.mysavingquest.component.setup.recurringbills.ui.RecurringBillsActivity
-import com.calikot.mysavingquest.ui.shared.LoadingDialog
+import com.calikot.mysavingquest.ui.shared.dialogs.ConfirmationDialog
+import com.calikot.mysavingquest.ui.shared.dialogs.LoadingDialog
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -290,7 +291,7 @@ fun AccountBalanceList(accounts: List<AccountBalanceItem>, listState: LazyListSt
         }
     }
     if (showDialog && accountToDelete != null) {
-        com.calikot.mysavingquest.ui.shared.ConfirmationDialog(
+        ConfirmationDialog(
             title = "Delete Account",
             message = "Are you sure you want to delete this account?",
             onConfirm = {
@@ -299,7 +300,11 @@ fun AccountBalanceList(accounts: List<AccountBalanceItem>, listState: LazyListSt
                         if (result.isSuccess) {
                             Toast.makeText(context, "Account deleted.", Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(context, result.exceptionOrNull()?.message, Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                result.exceptionOrNull()?.message,
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
                 }

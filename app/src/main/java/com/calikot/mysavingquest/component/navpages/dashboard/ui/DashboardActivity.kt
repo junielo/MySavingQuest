@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -35,6 +37,11 @@ import com.calikot.mysavingquest.util.formatCompact
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.Calendar
+import com.calikot.mysavingquest.ui.shared.chart.ChartType
+import com.calikot.mysavingquest.ui.shared.chart.MainChart
+import com.calikot.mysavingquest.ui.shared.chart.data.BarChartData
+import com.calikot.mysavingquest.ui.shared.chart.data.SingleLineData
 
 @AndroidEntryPoint
 class DashboardActivity : ComponentActivity() {
@@ -52,13 +59,46 @@ fun DashboardScreen() {
     val viewModel: DashboardVM = hiltViewModel()
     val actualSavingsRecord by viewModel.actualSavingsRecord.collectAsState()
 
+    // Temporary single-line chart data: Jan 1 to Jan 30, values from 15,000 to 30,000
+    val singleLineDataList = run {
+        val year = Calendar.getInstance().get(Calendar.YEAR)
+        (0 until 30).map { idx ->
+            val day = idx + 1
+            val cal = Calendar.getInstance().apply {
+                set(Calendar.YEAR, year)
+                set(Calendar.MONTH, Calendar.JANUARY)
+                set(Calendar.DAY_OF_MONTH, day)
+            }
+            val label = SimpleDateFormat("MMM d", Locale.getDefault()).format(cal.time)
+            val value = 15000 + ((30000 - 15000) * idx) / 29 // linear interpolation inclusive
+            SingleLineData(key = label, value = value)
+        }
+    }
+
+    val barChartDataList = run {
+        val year = Calendar.getInstance().get(Calendar.YEAR)
+        (0 until 30).map { idx ->
+            val day = idx + 1
+            val cal = Calendar.getInstance().apply {
+                set(Calendar.YEAR, year)
+                set(Calendar.MONTH, Calendar.JANUARY)
+                set(Calendar.DAY_OF_MONTH, day)
+            }
+            val label = SimpleDateFormat("MMM d", Locale.getDefault()).format(cal.time)
+            val value = 15000 + ((30000 - 15000) * idx) / 29 // linear interpolation inclusive
+            BarChartData(key = label, value = value)
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()) // make whole content scrollable
         ) {
             Box(
                 modifier = Modifier
@@ -166,7 +206,39 @@ fun DashboardScreen() {
                     }
                 }
             }
-            Spacer(modifier = Modifier.weight(1f))
+
+            // Render three chart types in order: DoubleLine, SingleLine, Bar
+            // 1) Double Line Chart
+//            Box(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .height(200.dp)
+//                    .padding(vertical = 8.dp)
+//            ) {
+//                MainChart(modifier = Modifier.fillMaxSize(), chartType = ChartType.DOUBLE_LINE)
+//            }
+
+            // 2) Single Line Chart
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(250.dp)
+                    .padding(vertical = 8.dp)
+            ) {
+                MainChart(modifier = Modifier.fillMaxSize(), chartType = ChartType.SINGLE_LINE, data = singleLineDataList)
+            }
+
+            // 3) Bar Chart
+//            Box(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .height(200.dp)
+//                    .padding(vertical = 8.dp)
+//            ) {
+//                MainChart(modifier = Modifier.fillMaxSize(), chartType = ChartType.BAR, data = barChartDataList)
+//            }
+
+            Spacer(modifier = Modifier.height(24.dp)) // replace weight spacer with a fixed spacer when scrollable
         }
     }
 }

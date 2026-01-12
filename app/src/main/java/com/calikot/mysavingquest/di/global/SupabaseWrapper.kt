@@ -79,7 +79,74 @@ class SupabaseWrapper @Inject constructor(
                 Result.success(result)
             }
         } catch (e: Exception) {
-            println("qwerty - getOwnSingleData error: $e")
+            println("getOwnSingleData error: $e")
+            Result.failure(e)
+        }
+    }
+
+    suspend inline fun <reified T : Any> getRowsFromRange(
+        tableName: String,
+        columnName: String,
+        startValue: Any,
+        endValue: Any
+    ): Result<List<T>> {
+        val userId = userAuthState.getUserLoggedIn()?.user?.id
+        if (userId == null) {
+            return Result.failure(IllegalStateException("User not logged in."))
+        }
+        return try {
+            val result = supabase.from(tableName)
+                .select(columns = Columns.ALL) {
+                    filter {
+                        eq("user_id", userId)
+                        gte(columnName, startValue)
+                        lte(columnName, endValue)
+                    }
+                }
+                .decodeList<T>()
+            if (result.isEmpty()) {
+                Result.failure(NoSuchElementException("No data found for user in the specified range."))
+            } else {
+                Result.success(result)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Retrieves rows owned by the current user where `columnName` is within [startValue, endValue]
+     * and an additional equality filter (equalsColumn == equalsValue) also applies.
+     */
+    suspend inline fun <reified T : Any> getRowsFromRangeWithEquals(
+        tableName: String,
+        columnName: String,
+        startValue: Any,
+        endValue: Any,
+        equalsColumn: String,
+        equalsValue: Any
+    ): Result<List<T>> {
+        val userId = userAuthState.getUserLoggedIn()?.user?.id
+        if (userId == null) {
+            return Result.failure(IllegalStateException("User not logged in."))
+        }
+        return try {
+            val result = supabase.from(tableName)
+                .select(columns = Columns.ALL) {
+                    filter {
+                        eq("user_id", userId)
+                        eq(equalsColumn, equalsValue)
+                        gte(columnName, startValue)
+                        lte(columnName, endValue)
+                    }
+                }
+                .decodeList<T>()
+            if (result.isEmpty()) {
+                Result.failure(NoSuchElementException("No data found for user in the specified range with the given filter."))
+            } else {
+                Result.success(result)
+            }
+        } catch (e: Exception) {
             Result.failure(e)
         }
     }
@@ -153,7 +220,6 @@ class SupabaseWrapper @Inject constructor(
             return Result.failure(IllegalArgumentException("ID cannot be null."))
         }
         return try {
-            println("qwerty - updateOwnData data: $data")
             val result = supabase.from(tableName)
                 .update(data) {
                     select()
@@ -168,7 +234,7 @@ class SupabaseWrapper @Inject constructor(
                 Result.success(result)
             }
         } catch (e: Exception) {
-            println("qwerty - Error message: $e")
+            println("Error message: $e")
             Result.failure(e)
         }
     }

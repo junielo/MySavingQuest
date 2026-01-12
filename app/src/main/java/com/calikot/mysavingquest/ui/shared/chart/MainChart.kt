@@ -11,7 +11,6 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
@@ -20,11 +19,17 @@ import com.calikot.mysavingquest.ui.shared.chart.data.ChartData
 import com.calikot.mysavingquest.ui.shared.chart.data.SingleLineData
 import com.calikot.mysavingquest.ui.shared.chart.properties.ParentGraphProps
 import com.calikot.mysavingquest.ui.shared.chart.types.singleLineChartView
-import com.calikot.mysavingquest.ui.shared.chart.util.getMinMaxFromList
+import com.calikot.mysavingquest.ui.shared.chart.util.getMaxMinFromList
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
+import com.calikot.mysavingquest.ui.shared.chart.data.BarChartData
+import com.calikot.mysavingquest.ui.shared.chart.data.DoubleLineData
+import com.calikot.mysavingquest.ui.shared.chart.types.barChartView
+import com.calikot.mysavingquest.ui.shared.chart.types.doubleLineChartView
+import com.calikot.mysavingquest.ui.shared.chart.util.getMaxMinFromTwoLists
 
 // Enum to pick which chart type to render
 enum class ChartType {
@@ -50,7 +55,7 @@ fun <T : ChartData> MainChart(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(props.backgroundColor)),
+            .background(props.backgroundColor),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
@@ -60,7 +65,7 @@ fun <T : ChartData> MainChart(
                 bottom = props.titleBottomPadding.dp
             ),
             text = title,
-            style = TextStyle(color = Color(props.titleTextColor), fontSize = props.titleTextSize.sp)
+            style = TextStyle(color = props.titleTextColor, fontSize = props.titleTextSize.sp)
         )
 
         Box(modifier = Modifier.fillMaxSize()) {
@@ -68,25 +73,47 @@ fun <T : ChartData> MainChart(
 
                 when (chartType) {
                     ChartType.BAR -> {
-//                val bars = data.filterIsInstance<BarChartData>()
-//                BarChartView(modifier = Modifier.fillMaxSize(), backgroundColor = backgroundColor, rectColor = primaryColor, data = bars)
+                        val bars = data.filterIsInstance<BarChartData>()
+                        val maxMin: Pair<Float, Float> = getMaxMinFromList(bars.map { it.value }, props.graphVerticalDrawOffset)
+                            ?: Pair(0f, 0f)
+
+                        drawGraphDetails(
+                            props,
+                            maxMin,
+                            bars.map { it.key }
+                        )
+                        barChartView(data = bars)
                     }
 
                     ChartType.SINGLE_LINE -> {
                         val singles = data.filterIsInstance<SingleLineData>()
+                        val maxMin: Pair<Float, Float> = getMaxMinFromList(singles.map { it.value }, props.graphVerticalDrawOffset)
+                            ?: Pair(0f, 0f)
 
                         drawGraphDetails(
                             props,
-                            getMinMaxFromList(singles.map { it.value }) ?: Pair(0f, 0f),
+                            maxMin,
                             singles.map { it.key }
                         )
 
-                        singleLineChartView(data = singles, mainChartProps = props)
+                        singleLineChartView(data = singles, mainChartProps = props, maxMin = maxMin)
                     }
 
                     ChartType.DOUBLE_LINE -> {
-//                val doubles = data.filterIsInstance<DoubleLineData>()
-//                DoubleLineChartView(modifier = Modifier.fillMaxSize(), data = doubles, backgroundColor = backgroundColor, triangleColor = primaryColor)
+                        val doubles = data.filterIsInstance<DoubleLineData>()
+                        val maxMin: Pair<Float, Float> = getMaxMinFromTwoLists(
+                            doubles.map { it.firstValue },
+                            doubles.map { it.secondValue },
+                            props.graphVerticalDrawOffset
+                        ) ?: Pair(0f, 0f)
+
+                        drawGraphDetails(
+                            props,
+                            maxMin,
+                            doubles.map { it.key }
+                        )
+
+                        doubleLineChartView(data = doubles, mainChartProps = props)
                     }
                 }
             }
@@ -111,7 +138,7 @@ private fun DrawScope.drawLineBorder(mainChartProp: ParentGraphProps) {
 
     // draw vertical line at left padding (from top to bottom minus bottom padding)
     drawLine(
-        color = Color(mainChartProp.borderColor),
+        color = mainChartProp.borderColor,
         start = androidx.compose.ui.geometry.Offset(leftX, 0f),
         end = androidx.compose.ui.geometry.Offset(leftX, bottomY),
         strokeWidth = mainChartProp.borderWidth
@@ -119,7 +146,7 @@ private fun DrawScope.drawLineBorder(mainChartProp: ParentGraphProps) {
 
     // draw horizontal line at bottom padding (from left padding to right edge minus right padding)
     drawLine(
-        color = Color(mainChartProp.borderColor),
+        color = mainChartProp.borderColor,
         start = androidx.compose.ui.geometry.Offset(leftX, bottomY),
         end = androidx.compose.ui.geometry.Offset(size.width - mainChartProp.graphRightPadding, bottomY),
         strokeWidth = mainChartProp.borderWidth
@@ -153,7 +180,7 @@ private fun DrawScope.drawTrendLabels(
     // paint for text using native android canvas
     val paint = Paint().apply {
         isAntiAlias = true
-        color = (mainChartProp.chartTextColor and 0xFFFFFFFF).toInt()
+        color = mainChartProp.chartTextColor.toArgb()
         // convert chartTextSize (assumed sp-ish) to px using DrawScope.density
         textSize = mainChartProp.chartTextSize * density
         textAlign = Paint.Align.RIGHT
@@ -161,18 +188,18 @@ private fun DrawScope.drawTrendLabels(
 
     for (i in 0 until labelsCount) {
         val fraction = i.toFloat() / (labelsCount - 1).coerceAtLeast(1)
-        // y position: 0 -> top (max), 1 -> bottom (min)
+        // y position: 0 -> top, 1 -> bottom
         val y = fraction * bottomY
 
         // draw grid line from leftX to right edge
         drawLine(
-            color = Color(mainChartProp.gridColor),
+            color = mainChartProp.gridColor,
             start = androidx.compose.ui.geometry.Offset(leftX, y),
             end = androidx.compose.ui.geometry.Offset(size.width - mainChartProp.graphRightPadding, y),
             strokeWidth = mainChartProp.gridWidth
         )
 
-        // compute label value (top label is max)
+        // compute label value (top label is max, bottom label is min) - inverted mapping
         val value = actualMax - fraction * (actualMax - actualMin)
 
         // format label: if nearly integer show no decimals, else show two decimals
@@ -207,7 +234,7 @@ private fun DrawScope.drawTimelineLabels(
     // paint for text using native android canvas
     val paint = Paint().apply {
         isAntiAlias = true
-        color = (mainChartProp.chartTextColor and 0xFFFFFFFF).toInt()
+        color = mainChartProp.chartTextColor.toArgb()
         textSize = mainChartProp.chartTextSize * density
         textAlign = Paint.Align.CENTER
     }
@@ -219,7 +246,7 @@ private fun DrawScope.drawTimelineLabels(
 
         // draw vertical grid from top to bottomY
         drawLine(
-            color = Color(mainChartProp.gridColor),
+            color = mainChartProp.gridColor,
             start = androidx.compose.ui.geometry.Offset(x, 0f),
             end = androidx.compose.ui.geometry.Offset(x, bottomY),
             strokeWidth = mainChartProp.gridWidth

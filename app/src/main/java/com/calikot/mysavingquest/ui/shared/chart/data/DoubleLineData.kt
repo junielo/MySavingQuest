@@ -5,4 +5,4 @@ data class DoubleLineData(
     val key: String,
     val firstValue: Number,
     val secondValue: Number
-)
+) : ChartData

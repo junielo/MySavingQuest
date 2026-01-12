@@ -37,11 +37,8 @@ import com.calikot.mysavingquest.util.formatCompact
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.Calendar
 import com.calikot.mysavingquest.ui.shared.chart.ChartType
 import com.calikot.mysavingquest.ui.shared.chart.MainChart
-import com.calikot.mysavingquest.ui.shared.chart.data.BarChartData
-import com.calikot.mysavingquest.ui.shared.chart.data.SingleLineData
 
 @AndroidEntryPoint
 class DashboardActivity : ComponentActivity() {
@@ -59,36 +56,11 @@ fun DashboardScreen() {
     val viewModel: DashboardVM = hiltViewModel()
     val actualSavingsRecord by viewModel.actualSavingsRecord.collectAsState()
 
-    // Temporary single-line chart data: Jan 1 to Jan 30, values from 15,000 to 30,000
-    val singleLineDataList = run {
-        val year = Calendar.getInstance().get(Calendar.YEAR)
-        (0 until 30).map { idx ->
-            val day = idx + 1
-            val cal = Calendar.getInstance().apply {
-                set(Calendar.YEAR, year)
-                set(Calendar.MONTH, Calendar.JANUARY)
-                set(Calendar.DAY_OF_MONTH, day)
-            }
-            val label = SimpleDateFormat("MMM d", Locale.getDefault()).format(cal.time)
-            val value = 15000 + ((30000 - 15000) * idx) / 29 // linear interpolation inclusive
-            SingleLineData(key = label, value = value)
-        }
-    }
+    // observe monthly chart data from ViewModel (SingleLineData per day)
+    val monthlyChartData by viewModel.monthlySavingsChart.collectAsState()
 
-    val barChartDataList = run {
-        val year = Calendar.getInstance().get(Calendar.YEAR)
-        (0 until 30).map { idx ->
-            val day = idx + 1
-            val cal = Calendar.getInstance().apply {
-                set(Calendar.YEAR, year)
-                set(Calendar.MONTH, Calendar.JANUARY)
-                set(Calendar.DAY_OF_MONTH, day)
-            }
-            val label = SimpleDateFormat("MMM d", Locale.getDefault()).format(cal.time)
-            val value = 15000 + ((30000 - 15000) * idx) / 29 // linear interpolation inclusive
-            BarChartData(key = label, value = value)
-        }
-    }
+    // use ViewModel monthly chart data directly
+    val usedSingleLineData = monthlyChartData
 
     Box(
         modifier = Modifier
@@ -102,16 +74,16 @@ fun DashboardScreen() {
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF232323)),
+                    .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
                 Card(
                     shape = RoundedCornerShape(24.dp),
                     elevation = CardDefaults.cardElevation(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    modifier = Modifier
-                        .padding(vertical = 50.dp, horizontal = 24.dp)
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF40C4FF),
+                        contentColor = Color.White),
+                    modifier = Modifier.padding(vertical = 50.dp, horizontal = 24.dp)
                 ) {
                     Column(
                         modifier = Modifier
@@ -127,21 +99,21 @@ fun DashboardScreen() {
                         val accountAmountFloat = (accountAmountInt).toFloat()
                         val netAmountFloat = (netAmountInt).toFloat()
 
-                        // Color: red when negative, green when positive, black otherwise
-                        val positiveGreen = Color(0xFF4CAF50)
+                        // Color: red when negative, green when positive, white otherwise (suitable on blue background)
+                        val positiveGreen = Color(0xFF011E8C)
                         val negativeRed = Color(0xFFF44336)
-                        val labelGray = Color(0xFF666666)
+                        val labelGray = Color(0xFF343434)
 
                         val accountColor = when {
                             accountAmountInt < 0 -> negativeRed
                             accountAmountInt > 0 -> positiveGreen
-                            else -> Color.Black
+                            else -> Color.White
                         }
 
                         val netColor = when {
                             netAmountInt < 0 -> negativeRed
                             netAmountInt > 0 -> positiveGreen
-                            else -> Color.Black
+                            else -> Color.White
                         }
 
                         // Arrange titles horizontally with a thin divider between them
@@ -163,7 +135,7 @@ fun DashboardScreen() {
                                 Text(
                                     text = formatCompact(accountAmountFloat),
                                     fontSize = 32.sp,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.Thin,
                                     color = accountColor
                                 )
                             }
@@ -173,7 +145,7 @@ fun DashboardScreen() {
                                 modifier = Modifier
                                     .width(1.dp)
                                     .height(48.dp)
-                                    .background(Color(0xFFDDDDDD))
+                                    .background(positiveGreen)
                             )
 
                             Column(
@@ -188,8 +160,8 @@ fun DashboardScreen() {
 
                                 Text(
                                     text = formatCompact(netAmountFloat),
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 32.sp,
+                                    fontWeight = FontWeight.Bold,
                                     color = netColor
                                 )
                             }
@@ -201,42 +173,27 @@ fun DashboardScreen() {
                         Text(
                             text = "As Of $monthYear",
                             fontSize = 12.sp,
+                            fontWeight = FontWeight.Black,
                             color = labelGray
                         )
                     }
                 }
             }
 
-            // Render three chart types in order: DoubleLine, SingleLine, Bar
-            // 1) Double Line Chart
-//            Box(
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .height(200.dp)
-//                    .padding(vertical = 8.dp)
-//            ) {
-//                MainChart(modifier = Modifier.fillMaxSize(), chartType = ChartType.DOUBLE_LINE)
-//            }
-
-            // 2) Single Line Chart
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(250.dp)
                     .padding(vertical = 8.dp)
             ) {
-                MainChart(modifier = Modifier.fillMaxSize(), chartType = ChartType.SINGLE_LINE, data = singleLineDataList)
+                MainChart(
+                    modifier = Modifier.fillMaxSize(),
+                    chartType = ChartType.SINGLE_LINE,
+                    data = usedSingleLineData,
+                    title = "Current Month Actual Savings"
+                )
             }
 
-            // 3) Bar Chart
-//            Box(
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .height(200.dp)
-//                    .padding(vertical = 8.dp)
-//            ) {
-//                MainChart(modifier = Modifier.fillMaxSize(), chartType = ChartType.BAR, data = barChartDataList)
-//            }
 
             Spacer(modifier = Modifier.height(24.dp)) // replace weight spacer with a fixed spacer when scrollable
         }

@@ -11,7 +11,6 @@ import com.calikot.mysavingquest.component.navpages.actionneeded.domain.models.B
 import com.calikot.mysavingquest.di.service.ActionNeededService
 import com.calikot.mysavingquest.util.isoStringToTimestamp
 import java.time.Instant
-import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeParseException
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -62,7 +61,6 @@ class ActionNeededVM @Inject constructor(
                 val finalResult = rpcResult.fold(onSuccess = { list ->
                     // Compute start/end of current month in device default zone (inclusive)
                     val zone = ZoneId.systemDefault()
-                    val currentYearMonth = YearMonth.now(zone)
                     val todayDate = java.time.LocalDate.now(zone)
 
                     // Parse notifTime string to Instant. Fallback handles epoch seconds or millis.
@@ -86,11 +84,6 @@ class ActionNeededVM @Inject constructor(
                         val inst = parseNotifInstant(item.notifTime)
                         if (inst == null) null else Triple(item, inst, inst.atZone(zone).toLocalDate())
                     }
-
-//                    // Keep only items in the current month
-//                    val inMonth = parsedItems.filter { (_, _, localDate) ->
-//                        YearMonth.from(localDate) == currentYearMonth
-//                    }
 
                     // Partition account items and others
                     val (accountTriples, otherTriples) = parsedItems.partition { (item, _, _) ->

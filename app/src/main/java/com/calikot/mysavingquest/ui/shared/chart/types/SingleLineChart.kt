@@ -12,18 +12,20 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import com.calikot.mysavingquest.ui.shared.chart.data.SingleLineData
 import com.calikot.mysavingquest.ui.shared.chart.properties.ParentGraphProps
 import com.calikot.mysavingquest.ui.shared.chart.properties.SingleLineProps
+import kotlin.math.max
 
 fun DrawScope.singleLineChartView(
     data: List<SingleLineData>,
     singleLineProp: SingleLineProps = SingleLineProps(),
-    mainChartProps: ParentGraphProps = ParentGraphProps()
+    mainChartProps: ParentGraphProps = ParentGraphProps(),
+    maxMin: Pair<Float, Float>
 ) {
 
     // extract numeric values
     val values = data.map { it.value.toFloat() }
 
-    var minVal = values.minOrNull() ?: 0f
-    var maxVal = values.maxOrNull() ?: 0f
+    var minVal = maxMin.second
+    var maxVal = maxMin.first
     if (minVal == maxVal) {
         // avoid division by zero
         minVal -= 1f
@@ -42,7 +44,7 @@ fun DrawScope.singleLineChartView(
     fun xForIndex(i: Int): Float = if (pointCount == 1) leftX + graphWidth / 2f else leftX + i * step
 
     fun yForValue(v: Float): Float {
-        val norm = (v - minVal) / (maxVal - minVal)
+        val norm = (max(v, minVal) - minVal) / (maxVal - minVal)
         // map normalized value into [0 .. graphHeight], then invert because canvas y grows downward
         return bottomY - norm * graphHeight
     }
@@ -53,12 +55,14 @@ fun DrawScope.singleLineChartView(
         for ((i, v) in values.withIndex()) {
             val x = xForIndex(i)
             val y = yForValue(v)
-            if (i == 0) moveTo(x, y) else lineTo(x, y)
+            if (i == 0) moveTo(x, y)
+            else
+                if (v != 0f) lineTo(x, y)
         }
     }
 
     // Fill under the line if requested
-    if (singleLineProp.fillColor != android.graphics.Color.TRANSPARENT) {
+    if (singleLineProp.fillColor != Color.Transparent) {
         val fillPath = Path().apply {
             fillType = PathFillType.NonZero
             for ((i, v) in values.withIndex()) {
@@ -75,7 +79,7 @@ fun DrawScope.singleLineChartView(
         }
         drawPath(
             path = fillPath,
-            color = Color(singleLineProp.fillColor)
+            color = singleLineProp.fillColor
         )
     }
 
@@ -93,7 +97,7 @@ fun DrawScope.singleLineChartView(
     // draw polyline
     drawPath(
         path = linePath,
-        color = Color(singleLineProp.lineColor),
+        color = singleLineProp.lineColor,
         style = Stroke(
             width = singleLineProp.lineWidth,
             cap = composeCap,
@@ -107,7 +111,7 @@ fun DrawScope.singleLineChartView(
             val x = xForIndex(i)
             val y = yForValue(v)
             drawCircle(
-                color = Color(singleLineProp.pointColor),
+                color = singleLineProp.pointColor,
                 radius = singleLineProp.pointRadius,
                 center = Offset(x, y)
             )

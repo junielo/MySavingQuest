@@ -18,7 +18,10 @@ data class ActualSavingsRecordModel(
     val accountAmount: Int,
 
     @SerialName("net_amount")
-    val netAmount: Int
+    val netAmount: Int,
+
+    @SerialName("created_at")
+    val createdAt: String
 )
 
 const val ACTUAL_SAVINGS_RECORD = "actual_savings_record"

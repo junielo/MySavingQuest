@@ -122,7 +122,17 @@ fun MainDrawerScreen(modifier: Modifier = Modifier) {
                     navController = navController,
                     startDestination = items[0]
                 ) {
-                    composable(items[0]) { DashboardScreen() }
+                    // Pass a lambda to DashboardScreen so it can navigate using the drawer NavController
+                    composable(items[0]) {
+                        DashboardScreen(onActionNeededClick = {
+                            currentRoute = items[1]
+                            navController.navigate(items[1]) {
+                                popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        })
+                    }
                     composable(items[1]) { ActionNeededScreen() }
                     composable(items[2]) { HistoryScreen() }
                     composable(items[3]) { SettingsScreen() }

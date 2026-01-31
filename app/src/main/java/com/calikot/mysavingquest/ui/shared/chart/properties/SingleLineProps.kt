@@ -7,7 +7,7 @@ data class SingleLineProps(
     val lineWidth: Float = 3f,
     val lineColor: Color = Color(0xFF00A86B),
     val fillColor: Color = Color.Black.copy(alpha = 0f),
-    val showPoints: Boolean = false,
+    val showPoints: Boolean = true,
     val pointRadius: Float = 4f,
     val pointColor: Color = lineColor,
     val strokeCap: Paint.Cap = Paint.Cap.ROUND,

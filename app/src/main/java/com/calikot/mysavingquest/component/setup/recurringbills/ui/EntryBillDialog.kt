@@ -108,7 +108,7 @@ fun EntryBillDialog(
                 Text("Amount", fontWeight = FontWeight.Medium, fontSize = 16.sp)
                 OutlinedTextField(
                     value = amount,
-                    onValueChange = { mAmount -> amount = mAmount.filter { it.isDigit() } },
+                    onValueChange = { mAmount -> amount = mAmount.filter { it.isDigit() || it == '.' } },
                     placeholder = { Text("Expense amount") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
@@ -141,14 +141,14 @@ fun EntryBillDialog(
                                     id = bill.id,
                                     name = name,
                                     date = convertDateMillisToISOString(date),
-                                    amount = amount.toIntOrNull() ?: bill.amount,
+                                    amount = amount.toFloatOrNull() ?: bill.amount,
                                     isAuto = autoPay
                                 )
                             } else {
                                 RecurringBillItem(
                                     name = name,
                                     date = convertDateMillisToISOString(date),
-                                    amount = amount.toIntOrNull() ?: 0,
+                                    amount = amount.toFloatOrNull() ?: 0f,
                                     isAuto = autoPay
                                 )
                             }

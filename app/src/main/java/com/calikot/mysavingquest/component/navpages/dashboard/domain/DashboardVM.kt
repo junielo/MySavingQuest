@@ -51,104 +51,93 @@ class DashboardVM @Inject constructor(
     }
 
     /**
-     * Fetch actual savings records for the current month. The month/year string passed to the service
-     * is in MM-yyyy format (e.g., "01-2026").
-     * Builds a list with one entry per day of the month using `SingleLineData` where
-     * key = "Jan 1", "Jan 2"... and value = sum of netAmount for that day.
-     * Logs the monthYear and the resulting list for debugging.
+     * Fetch actual savings records for the current month and build a list with one entry per day.
+     * key = "Jan 1", "Jan 2"... value = sum of netAmount for that day.
+     * This implementation is shorter and keeps robust date parsing (regex first, then common formats).
      */
     fun getActualSavingsCurrentMonth() {
-        // compute current month-year in MM-yyyy
+        // current month in MM-yyyy (service expects this format)
         val sdf = SimpleDateFormat("MM-yyyy", Locale.US)
         val monthYear = sdf.format(Calendar.getInstance().time)
-
-        Log.d("DashboardVM", "Fetching actual savings for monthYear=$monthYear")
 
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
             val result = dashboardService.getActualSavingsCurrentMonth(monthYear)
 
-            // Prepare calendar info for current month
+            // prepare calendar for month metadata
             val cal = Calendar.getInstance()
-            val parsedSdf = SimpleDateFormat("MM-yyyy", Locale.US)
-            parsedSdf.isLenient = false
-            val parsedDate = try {
-                parsedSdf.parse(monthYear)
-            } catch (e: Exception) {
-                Log.d("DashboardVM", "Failed to parse monthYear: $monthYear", e)
-                null
-            }
-            if (parsedDate != null) {
-                cal.time = parsedDate
-            } else {
-                // fallback to current date (shouldn't normally happen because monthYear is generated locally)
+            try {
+                val parsed = SimpleDateFormat("MM-yyyy", Locale.US).parse(monthYear)
+                if (parsed != null) cal.time = parsed
+            } catch (_: Exception) {
+                // fallback to current date
                 cal.time = Calendar.getInstance().time
             }
+
             val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
             val monthShort = SimpleDateFormat("MMM", Locale.US).format(cal.time)
 
-            // sums per day (1-based indexed stored at [day-1])
-            val sums = IntArray(daysInMonth)
+            // Helper: extract day-of-month from various possible createdAt formats
+            val dateRegex = Regex("\\d{4}-\\d{2}-\\d{2}")
+            fun extractDayOfMonth(createdAt: String): Int? {
+                // Try quick regex YYYY-MM-DD
+                val m = dateRegex.find(createdAt)
+                if (m != null) {
+                    val parts = m.value.split("-")
+                    val d = parts.getOrNull(2)?.toIntOrNull()
+                    if (d != null) return d
+                }
 
-            if (result.isSuccess) {
-                val list = result.getOrNull() ?: emptyList()
-
-                // extract day from createdAt using regex YYYY-MM-DD
-                val dateRegex = Regex("\\d{4}-\\d{2}-\\d{2}")
-
-                for (rec in list) {
-                    val createdAt = rec.createdAt
-                    val m = dateRegex.find(createdAt)
-                    if (m != null) {
-                        val datePart = m.value // yyyy-MM-dd
-                        val parts = datePart.split("-")
-                        if (parts.size == 3) {
-                            val dayInt = parts[2].toIntOrNull()
-                            if (dayInt != null && dayInt in 1..daysInMonth) {
-                                sums[dayInt - 1] = sums[dayInt - 1] + rec.netAmount
-                            }
+                // TODO: Fix this into a single date pattern
+                // Try a few common timestamp formats
+                val patterns = arrayOf(
+                    "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                    "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                    "yyyy-MM-dd HH:mm:ss",
+                    "yyyy-MM-dd"
+                )
+                for (p in patterns) {
+                    try {
+                        val fmt = SimpleDateFormat(p, Locale.US)
+                        fmt.isLenient = false
+                        val parsed = fmt.parse(createdAt)
+                        if (parsed != null) {
+                            val tmp = Calendar.getInstance()
+                            tmp.time = parsed
+                            return tmp.get(Calendar.DAY_OF_MONTH)
                         }
-                    } else {
-                        // fallback: try to parse with common datetime patterns
-                        try {
-                            val alt = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-                            val d = alt.parse(createdAt)
-                            if (d != null) {
-                                val tmpCal = Calendar.getInstance()
-                                tmpCal.time = d
-                                val dayInt = tmpCal.get(Calendar.DAY_OF_MONTH)
-                                if (dayInt in 1..daysInMonth) {
-                                    sums[dayInt - 1] = sums[dayInt - 1] + rec.netAmount
-                                }
-                            }
-                        } catch (_: Exception) {
-                            // ignore unparseable createdAt
-                        }
+                    } catch (_: Exception) {
+                        // try next
                     }
                 }
 
-                // Build SingleLineData list
-                val outputChart = ArrayList<SingleLineData>(daysInMonth)
-                for (i in 1..daysInMonth) {
-                    val key = "$monthShort $i"
-                    val valueNum: Number = sums[i - 1]
-                    outputChart.add(SingleLineData(key = key, value = valueNum))
+                return null
+            }
+
+            // Sum netAmount per day (1..daysInMonth)
+            val sums = IntArray(daysInMonth)
+            if (result.isSuccess) {
+                val list = result.getOrNull() ?: emptyList()
+                for (rec in list) {
+                    val day = extractDayOfMonth(rec.createdAt)
+                    if (day != null && day in 1..daysInMonth) {
+                        sums[day - 1] = rec.netAmount
+                    }
                 }
-
-                _monthlySavingsChart.value = outputChart
-
             } else {
                 val ex = result.exceptionOrNull()
                 Log.d("DashboardVM", "getActualSavingsCurrentMonth failure: ${ex?.message}")
-
-                // still build empty list with zeros so UI has consistent size
-                val outputChart = ArrayList<SingleLineData>(daysInMonth)
-                for (i in 1..daysInMonth) {
-                    val key = "$monthShort $i"
-                    outputChart.add(SingleLineData(key = key, value = 0))
-                }
-                _monthlySavingsChart.value = outputChart
+                // leave sums as zeros
             }
+
+            // Build SingleLineData list (one entry per day)
+            val outputChart = ArrayList<SingleLineData>(daysInMonth)
+            for (i in 1..daysInMonth) {
+                val key = "$monthShort $i"
+                outputChart.add(SingleLineData(key = key, value = sums[i - 1]))
+            }
+
+            _monthlySavingsChart.value = outputChart
 
             withContext(Dispatchers.Main) {
                 _isLoading.value = false

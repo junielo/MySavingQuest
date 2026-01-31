@@ -42,11 +42,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import com.calikot.mysavingquest.util.isoStringToTimestamp
-import com.calikot.mysavingquest.util.longToFormattedDateString
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -77,37 +72,10 @@ fun ActionNeededScreen() {
 
     val viewModel = hiltViewModel<ActionNeededVM>()
 
-    // Collect list and loading state from ViewModel
-    val domainItems by viewModel.actionNeededList.collectAsState(initial = emptyList())
+    // Collect display list and loading state from ViewModel
+    val actionNeededList by viewModel.actionNeededList.collectAsState(initial = emptyList())
     val isLoading by viewModel.isLoading.collectAsState(initial = false)
 
-    // Map domain model to UI model with friendly subtitle formatting
-    val actionNeededList = domainItems.sortedBy { it.notifType }.map { d ->
-        val subtitle = run {
-            val ts = try { isoStringToTimestamp(d.notifTime) } catch (_: Exception) { 0L }
-            if (ts > 0L) {
-                // Format: "October 22, 2025 - 05:00 PM"
-                val datePart = longToFormattedDateString(ts)
-                val timeFormatter = SimpleDateFormat("hh:mm a", Locale.getDefault())
-                val timePart = try { timeFormatter.format(Date(ts)) } catch (_: Exception) { "" }
-                val amountPart = if (d.billAmount > 0) " - ₱${d.billAmount}" else ""
-                if (timePart.isNotBlank()) "$datePart - $timePart$amountPart" else "$datePart$amountPart"
-            } else {
-                // Fallback: show raw notifTime or amount if available
-                val amountPart = if (d.billAmount > 0) " - ₱${d.billAmount}" else ""
-                (d.notifTime.ifBlank { "" } + amountPart).trim()
-            }
-        }
-
-        ActionDisplayItem(
-            id = d.id,
-            title = d.notifName,
-            subtitle = subtitle,
-            isInputBalance = (d.notifType == "ACCOUNT_GROUP"),
-            billIsAuto = d.billIsAuto,
-            notifType = d.notifType
-        )
-    }
     Surface(modifier = Modifier.fillMaxSize()) {
         // Use a Box so we can overlay a centered loading indicator correctly
         Box(modifier = Modifier.fillMaxSize()) {

@@ -8,8 +8,13 @@ import com.calikot.mysavingquest.component.navpages.actionneeded.domain.models.A
 import com.calikot.mysavingquest.component.navpages.actionneeded.domain.models.AccUpdateItem
 import com.calikot.mysavingquest.component.navpages.actionneeded.domain.models.BillsDeleteItem
 import com.calikot.mysavingquest.component.navpages.actionneeded.domain.models.BillsUpdateItem
+import com.calikot.mysavingquest.component.navpages.actionneeded.domain.models.ActionDisplayItem
 import com.calikot.mysavingquest.di.service.ActionNeededService
 import com.calikot.mysavingquest.util.isoStringToTimestamp
+import com.calikot.mysavingquest.util.longToFormattedDateString
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeParseException
@@ -20,6 +25,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
+
 @RequiresApi(Build.VERSION_CODES.O)
 @HiltViewModel
 class ActionNeededVM @Inject constructor(
@@ -28,8 +37,18 @@ class ActionNeededVM @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _actionNeededList = MutableStateFlow<List<ActionNeededItem>>(emptyList())
-    val actionNeededList: StateFlow<List<ActionNeededItem>> = _actionNeededList
+    // Expose a list of UI-friendly display items (mapped from domain models)
+    private val _actionNeededList = MutableStateFlow<List<ActionDisplayItem>>(emptyList())
+    val actionNeededList: StateFlow<List<ActionDisplayItem>> = _actionNeededList
+
+    /**
+     * Reactive count of actionable items derived from `_actionNeededList`.
+     * Consumers should collect this StateFlow (e.g., collectAsState in Compose)
+     * so the UI is recomposed when the count changes.
+     */
+    val actionableCount: StateFlow<Int> = _actionNeededList
+        .map { list -> list.count { it.notifType != "BILL_C_NONE" } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
     // Holds the original account-type items so callers can access the full list
     private val _accountItems = MutableStateFlow<List<ActionNeededItem>>(emptyList())
@@ -43,15 +62,17 @@ class ActionNeededVM @Inject constructor(
      * Public helper to update the billAmount for an account item by id.
      * This is safe to call from the UI thread and updates the backing MutableStateFlow.
      */
-    fun updateAccountItemAmount(id: Int, newAmount: Int) {
+    fun updateAccountItemAmount(id: Int, newAmount: Float) {
         _accountItems.value = _accountItems.value.map { if (it.id == id) it.copy(billAmount = newAmount) else it }
     }
 
     /**
      * Non-suspending wrapper that runs fetch in viewModelScope and reports progress
      * via _isLoading and onComplete callback. Mirrors the sample pattern.
+     *
+     * This function now maps domain models to ActionDisplayItem (subtitle formatting,
+     * grouping for account items) so the UI can consume a ready-to-render list.
      */
-
     fun fetchPendingNotifications(onComplete: (Result<List<ActionNeededItem>>) -> Unit = {}) {
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
@@ -103,8 +124,10 @@ class ActionNeededVM @Inject constructor(
                         item.copy(notifType = newType)
                     }
 
+                    // TODO: Do not include if the date input is for the future
                     val resultList = if (accountTriples.isNotEmpty()) {
-                        val totalBill = accountTriples.sumOf { it.first.billAmount }
+                        // compute total as Float to match model type
+                        val totalBill = accountTriples.fold(0f) { acc, triple -> acc + triple.first.billAmount }
                         val representativeNotifTime = accountTriples.minByOrNull { it.second.toEpochMilli() }?.first?.notifTime ?: ""
 
                         val grouped = ActionNeededItem(
@@ -123,7 +146,33 @@ class ActionNeededVM @Inject constructor(
                 }, onFailure = { err -> Result.failure(err) })
 
                 if (finalResult.isSuccess) {
-                    _actionNeededList.value = finalResult.getOrNull() ?: emptyList()
+                    // Map domain ActionNeededItem -> ActionDisplayItem (subtitle formatting)
+                    _actionNeededList.value = (finalResult.getOrNull() ?: emptyList()).sortedBy { it.notifType }.map { d ->
+                        val subtitle = run {
+                            val ts = try { isoStringToTimestamp(d.notifTime) } catch (_: Exception) { 0L }
+                            if (ts > 0L) {
+                                // Format: "October 22, 2025 - 05:00 PM"
+                                val datePart = longToFormattedDateString(ts)
+                                val timeFormatter = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                                val timePart = try { timeFormatter.format(Date(ts)) } catch (_: Exception) { "" }
+                                val amountPart = if (d.billAmount > 0) " - ₱${d.billAmount}" else ""
+                                if (timePart.isNotBlank()) "$datePart - $timePart$amountPart" else "$datePart$amountPart"
+                            } else {
+                                // Fallback: show raw notifTime or amount if available
+                                val amountPart = if (d.billAmount > 0) " - ₱${d.billAmount}" else ""
+                                (d.notifTime.ifBlank { "" } + amountPart).trim()
+                            }
+                        }
+
+                        ActionDisplayItem(
+                            id = d.id,
+                            title = d.notifName,
+                            subtitle = subtitle,
+                            isInputBalance = (d.notifType == "ACCOUNT_GROUP"),
+                            billIsAuto = d.billIsAuto,
+                            notifType = d.notifType
+                        )
+                    }
                 }
 
                 withContext(Dispatchers.Main) {
@@ -158,6 +207,7 @@ class ActionNeededVM @Inject constructor(
                     )
                     val success = try {
                         actionNeededService.updateAccNotification(update)
+                        true
                     } catch (_: Exception) {
                         false
                     }

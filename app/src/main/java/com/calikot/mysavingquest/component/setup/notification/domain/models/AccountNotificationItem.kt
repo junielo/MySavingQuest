@@ -18,7 +18,7 @@ data class AccountNotificationItem(
     val accountType: String,
 
     @SerialName("acc_amount")
-    val amount: Int,
+    val amount: Float,
 
     @SerialName("acc_input_date")
     val accInputDate: String

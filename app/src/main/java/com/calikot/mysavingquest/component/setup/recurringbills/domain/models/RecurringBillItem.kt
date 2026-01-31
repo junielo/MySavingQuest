@@ -15,7 +15,7 @@ data class RecurringBillItem(
     val date: String,
 
     @SerialName("bill_amount")
-    val amount: Int,
+    val amount: Float,
 
     @SerialName("bill_is_auto")
     val isAuto: Boolean

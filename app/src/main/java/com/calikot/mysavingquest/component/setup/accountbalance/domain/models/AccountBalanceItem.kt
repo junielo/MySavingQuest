@@ -12,7 +12,7 @@ data class AccountBalanceItem(
     val accName: String,
 
     @SerialName("acc_type")
-    val accType: String // "Debit" or "Credit"
+    val accType: String, // "Debit" or "Credit"
 )
 
 const val ACCOUNT_BALANCE = "account_balance"

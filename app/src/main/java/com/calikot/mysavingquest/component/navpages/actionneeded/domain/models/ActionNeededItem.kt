@@ -24,7 +24,7 @@ data class ActionNeededItem(
     val notifName: String,
 
     @SerialName("bill_amount")
-    val billAmount: Int,
+    val billAmount: Float,
 
     @SerialName("notif_time")
     val notifTime: String,
@@ -39,7 +39,7 @@ data class AccUpdateItem(
     val id: Int,
 
     @SerialName("acc_amount")
-    val accAmount: Int
+    val accAmount: Float
 )
 
 @Serializable

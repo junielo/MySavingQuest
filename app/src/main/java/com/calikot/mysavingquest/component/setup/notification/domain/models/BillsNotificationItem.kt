@@ -21,7 +21,7 @@ data class BillsNotificationItem(
     val billIsAuto: Boolean,
 
     @SerialName("bill_amount")
-    val amount: Int,
+    val amount: Float,
 
     @SerialName("bill_date")
     val billDate: String,

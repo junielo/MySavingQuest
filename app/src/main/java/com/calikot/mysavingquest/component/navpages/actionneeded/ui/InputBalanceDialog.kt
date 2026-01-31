@@ -23,6 +23,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.Icon
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -41,16 +43,67 @@ fun InputBalanceDialog(
     // Collect loading state from ViewModel
     val isLoading by viewModel.isLoading.collectAsState(initial = false)
 
-    // Keep a local editable map of input strings keyed by account id so Compose recomposes
+    // Keep a local editable map of TextFieldValue keyed by account id so Compose recomposes
     // when a field changes. Initialize from accounts when dialog opens or accounts change.
-    val amounts = remember { mutableStateMapOf<Int, String>() }
+    val amounts = remember { mutableStateMapOf<Int, TextFieldValue>() }
+
+    // Helper: format a raw numeric string (digits and optional one dot) with commas for integer part
+    fun formatNumber(raw: String): String {
+        if (raw.isEmpty()) return ""
+        // Ensure only digits and at most one dot
+        val filtered = raw.filter { it.isDigit() || it == '.' }
+        val dotIndex = filtered.indexOf('.')
+        val intPart = if (dotIndex >= 0) filtered.substring(0, dotIndex) else filtered
+        val fracPart = if (dotIndex >= 0) filtered.substring(dotIndex + 1) else null
+
+        // Format integer part with commas
+        val intDigits = intPart.filter { it.isDigit() }
+        val intToFormat = intDigits.ifEmpty { "0" }
+        val sb = StringBuilder()
+        var count = 0
+        for (i in intToFormat.length - 1 downTo 0) {
+            sb.append(intToFormat[i])
+            count++
+            if (count % 3 == 0 && i != 0) sb.append(',')
+        }
+        val formattedInt = sb.reverse().toString()
+
+        return if (dotIndex >= 0) {
+            // Preserve fractional digits as typed (no automatic rounding/truncation)
+            if (filtered.endsWith('.')) {
+                // User typed a dot at the end
+                "$formattedInt."
+            } else {
+                "$formattedInt.${fracPart ?: ""}"
+            }
+        } else {
+            formattedInt
+        }
+    }
+
+    // Helper: strip formatting and keep only digits and at most first dot
+    fun extractRaw(text: String): String {
+        val sb = StringBuilder()
+        var dotSeen = false
+        for (ch in text) {
+            if (ch.isDigit()) sb.append(ch)
+            else if (ch == '.' && !dotSeen) {
+                sb.append('.')
+                dotSeen = true
+            }
+        }
+        return sb.toString()
+    }
 
     // Sync local amounts with current accounts when accounts change
     LaunchedEffect(accounts) {
         accounts.forEach { acc ->
             // initialize with existing billAmount if not present
             if (!amounts.containsKey(acc.id)) {
-                amounts[acc.id] = if (acc.billAmount > 0) acc.billAmount.toString() else ""
+                // We initialize using the integer billAmount; format it for display
+                val initRaw = if (acc.billAmount > 0) acc.billAmount.toString() else ""
+                val formatted = formatNumber(initRaw)
+                amounts[acc.id] = TextFieldValue(text = formatted, selection = TextRange(formatted.length))
             }
         }
 
@@ -123,14 +176,49 @@ fun InputBalanceDialog(
                                     ) {
                                         Text(text = acc.notifName, style = MaterialTheme.typography.titleMedium)
                                         OutlinedTextField(
-                                            value = amounts[acc.id] ?: "",
-                                            onValueChange = { new ->
-                                                // Keep only digits and optional negative? We'll allow digits only for simplicity
-                                                val filtered = new.filter { it.isDigit() }
-                                                amounts[acc.id] = filtered
-                                                val newVal = filtered.toIntOrNull() ?: 0
-                                                // Update ViewModel's accountItems via explicit helper
-                                                viewModel.updateAccountItemAmount(acc.id, newVal)
+                                            value = amounts[acc.id] ?: TextFieldValue("") ,
+                                            onValueChange = { newValue ->
+                                                // newValue is a TextFieldValue — we need to extract raw numeric, format it,
+                                                // compute new cursor position and store formatted TextFieldValue while
+                                                // updating the ViewModel (we keep calling the Int-based API by truncating decimals).
+
+                                                val incoming = newValue.text
+
+                                                // Compute how many non-comma characters (digits and dot) were to the left of the cursor
+                                                val cursorPos = newValue.selection.start.coerceIn(0, incoming.length)
+                                                val nonCommaBeforeCursor = incoming.substring(0, cursorPos).count { it != ',' }
+
+                                                // Extract raw numeric (digits and at most one dot)
+                                                val raw = extractRaw(incoming)
+
+                                                // Format raw for display
+                                                val formatted = formatNumber(raw)
+
+                                                // Compute new cursor position in formatted text so caret stays near same digit position
+                                                var newCursor = 0
+                                                var nonCommaSeen = 0
+                                                for (i in formatted.indices) {
+                                                    if (formatted[i] != ',') nonCommaSeen++
+                                                    if (nonCommaSeen >= nonCommaBeforeCursor) {
+                                                        // place cursor after this non-comma character (digit or dot)
+                                                        newCursor = i + 1
+                                                        break
+                                                    }
+                                                }
+                                                if (nonCommaBeforeCursor == 0) {
+                                                    // place at start
+                                                    newCursor = 0
+                                                }
+                                                if (newCursor > formatted.length) newCursor = formatted.length
+
+                                                // If the original incoming cursor was after the dot and fractional exists, attempt to place accordingly
+                                                // (above logic already counts fractional digits as digits so it works across the dot)
+
+                                                amounts[acc.id] = TextFieldValue(text = formatted, selection = TextRange(newCursor))
+
+                                                // Update ViewModel — we call Float API. We'll convert raw to Double and then to Float()
+                                                val numericValue = raw.toDoubleOrNull() ?: 0.0
+                                                viewModel.updateAccountItemAmount(acc.id, numericValue.toFloat())
                                             },
                                             placeholder = { Text("Enter amount") },
                                             modifier = Modifier

@@ -43,7 +43,7 @@ import com.calikot.mysavingquest.ui.shared.dialogs.LoadingDialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.calikot.mysavingquest.component.setup.recurringbills.domain.RecurringBillsVM
 import com.calikot.mysavingquest.util.formatRecurringDay
-import com.calikot.mysavingquest.util.formatWithCommas
+import com.calikot.mysavingquest.util.formatCompact
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
@@ -367,7 +367,7 @@ fun RecurringBillRow(bill: RecurringBillItem, onEdit: (() -> Unit)) {
             Spacer(modifier = Modifier.width(8.dp))
         }
         Text(
-            text = formatWithCommas(bill.amount),
+            text = formatCompact(bill.amount),
             fontSize = 20.sp,
             fontWeight = FontWeight.Medium,
             color = Color.Black,

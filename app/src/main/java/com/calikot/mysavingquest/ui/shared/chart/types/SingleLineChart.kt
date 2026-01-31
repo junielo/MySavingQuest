@@ -110,11 +110,14 @@ fun DrawScope.singleLineChartView(
         for ((i, v) in values.withIndex()) {
             val x = xForIndex(i)
             val y = yForValue(v)
-            drawCircle(
-                color = singleLineProp.pointColor,
-                radius = singleLineProp.pointRadius,
-                center = Offset(x, y)
-            )
+
+            if (y != graphHeight) {
+                drawCircle(
+                    color = singleLineProp.pointColor,
+                    radius = singleLineProp.pointRadius,
+                    center = Offset(x, y)
+                )
+            }
         }
     }
 }
